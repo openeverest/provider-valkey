@@ -1,0 +1,33 @@
+# Component type version catalog.
+# Add new versions here when operator releases are available.
+# Mark exactly one version per type as `default: true`.
+#
+# Run `provider-sdk add component` to populate this file automatically.
+
+componentTypes:
+  valkey:
+    versions:
+    - version: "9.0.0"
+      image: valkey/valkey:9.0.0
+      default: true
+    - version: "8.1.1"
+      image: valkey/valkey:8.1.1
+  exporter:
+    versions:
+    - version: "1.80.0"
+      image: oliver006/redis_exporter:v1.80.0
+      default: true
+
+# Version bundles — curated sets of component versions known to work together.
+# Users set spec.version on an Instance to select a bundle.
+# The bundle with default: true is used when spec.version is omitted.
+versions:
+- name: "9.0"
+  default: true
+  components:
+    engine: "9.0.0"
+    monitoring: "1.80.0"
+- name: "8.1"
+  components:
+    engine: "8.1.1"
+    monitoring: "1.80.0"

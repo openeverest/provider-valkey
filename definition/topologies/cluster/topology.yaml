@@ -1,0 +1,139 @@
+# Cluster topology definition.
+# This file defines both the structural topology and its UI rendering.
+#
+# config.components: Which components are used and their defaults.
+# config.configSchema: Reference a Go type for custom topology config fields.
+# ui: Rendering hints for the frontend form.
+#
+# See github.com/openeverest/provider-sdk/blob/main/PROVIDER_DEVELOPMENT.md
+# for detailed guidance.
+
+config:
+  configSchema: ClusterTopologyConfig
+  components:
+    engine:
+      defaults:
+        replicas: 1
+    monitoring:
+      optional: true
+ui:
+  sections:
+    basicInfo:
+      label: Basic Information
+      description: Provide the basic information for your new database.
+      components:
+        version:
+          uiType: select
+          path: spec.version
+          fieldParams:
+            label: Database Version
+            optionsPath: spec.versions
+            optionsPathConfig:
+              labelPath: name
+              valuePath: name
+            modes:
+              edit:
+                disabled: true
+          validation:
+            required: true
+    resources:
+      label: Resources
+      description: Configure the shards, replicas and resources for your cluster.
+      components:
+        numberOfShards:
+          uiType: number
+          path: spec.topology.config.numShards
+          fieldParams:
+            label: Number of shards
+            defaultValue: 3
+            step: 1
+            modes:
+              edit:
+                disabled: true
+          validation:
+            required: true
+            int: true
+            min: 3
+            max: 100
+        numberOfReplicas:
+          uiType: number
+          path: spec.components.engine.replicas
+          fieldParams:
+            label: Replicas per shard
+            defaultValue: 1
+            step: 1
+          validation:
+            required: true
+            int: true
+            min: 0
+            max: 10
+        resources:
+          uiType: group
+          groupType: line
+          components:
+            cpu:
+              uiType: number
+              path: spec.components.engine.resources.limits.cpu
+              fieldParams:
+                label: CPU
+                defaultValue: 1
+                step: 1
+                badge: cores
+              validation:
+                required: true
+                min: 0.1
+            memory:
+              uiType: number
+              path: spec.components.engine.resources.limits.memory
+              fieldParams:
+                label: Memory
+                defaultValue: 2
+                step: 0.1
+                badge: Gi
+                badgeToApi: true
+              validation:
+                required: true
+                min: 0.128
+            disk:
+              uiType: number
+              path: spec.components.engine.storage.size
+              fieldParams:
+                label: Disk
+                defaultValue: 10
+                badge: Gi
+                badgeToApi: true
+              validation:
+                required: true
+                int: true
+                min: 1
+                modes:
+                  edit:
+                    celExpressions:
+                      - celExpr: "spec.components.engine.storage.size >= original.spec.components.engine.storage.size"
+                        message: Disk size cannot be decreased
+          componentsOrder:
+            - cpu
+            - memory
+            - disk
+      componentsOrder:
+        - numberOfShards
+        - numberOfReplicas
+        - resources
+    advanced:
+      label: Advanced configuration
+      description: Configure advanced settings for your database.
+      components:
+        storageClass:
+          uiType: select
+          path: spec.components.engine.storage.storageClass
+          dataSource:
+            provider: storageClasses
+          fieldParams:
+            label: Storage class
+            modes:
+              edit:
+                disabled: true
+  sectionsOrder:
+    - basicInfo
+    - resources
+    - advanced

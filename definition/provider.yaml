@@ -1,0 +1,19 @@
+# Provider identity and component definitions.
+# Component types define what software each component runs (e.g. mongod, backup).
+# Component names are the logical roles used in topologies (e.g. engine, proxy).
+#
+# Run `provider-sdk add component` to add components interactively.
+# For more details, see github.com/openeverest/provider-sdk/blob/main/PROVIDER_DEVELOPMENT.md.
+
+name: valkey
+
+# Components map logical component names to their type.
+# The type must match a key in versions.yaml's componentTypes.
+components:
+  # engine runs the Valkey server and backs the ValkeyCluster resource.
+  engine:
+    type: valkey
+    customSpecSchema: ValkeyEngineConfig
+  # monitoring enables the Prometheus metrics exporter sidecar on each pod.
+  monitoring:
+    type: exporter

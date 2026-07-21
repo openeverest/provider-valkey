@@ -1,0 +1,53 @@
+# Example Instance CR for the valkey provider (cluster topology).
+#
+# A sharded Valkey Cluster deployment. Data is partitioned across shards,
+# each with its own primary and optional replicas.
+#
+# Prerequisites:
+#   1. OpenEverest CRDs installed
+#   2. Provider CR applied (definition/provider.yaml)
+#   3. valkey-operator running
+#   4. Provider controller running
+apiVersion: core.openeverest.io/v1alpha1
+kind: Instance
+metadata:
+  name: valkey-cluster
+  namespace: default
+spec:
+  # Provider identifier
+  provider: valkey
+
+  # High-level version bundle — selects a curated, pre-validated set of
+  # component versions. Omit to use the provider's default bundle.
+  version: "9.0.0"
+
+  # Topology configuration — a sharded Valkey Cluster (minimum 3 shards).
+  topology:
+    type: cluster
+    config:
+      numShards: 3
+
+  components:
+    # Main Valkey engine (required)
+    engine:
+      type: valkey
+      # Number of replicas per shard (0 = primaries only).
+      replicas: 1
+      resources:
+        requests:
+          cpu: "1"
+          memory: 2Gi
+        limits:
+          cpu: "1"
+          memory: 2Gi
+      storage:
+        size: 10Gi
+        # storageClass: standard
+      # Optional Valkey configuration overrides.
+      # customSpec:
+      #   config:
+      #     maxmemory-policy: allkeys-lru
+
+    # Metrics exporter sidecar (optional)
+    monitoring:
+      type: exporter

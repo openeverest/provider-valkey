@@ -1,0 +1,23 @@
+apiVersion: v2
+name: provider-valkey
+description: A Helm chart for deploying the OpenEverest provider-valkey provider
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - openeverest
+  - provider
+  - database
+home: https://github.com/openeverest/provider-valkey
+sources:
+  - https://github.com/openeverest/provider-valkey
+maintainers:
+  - name: OpenEverest Contributors
+# TODO: Add openeverest chart as a dependency once it is published.
+# For now, OpenEverest (operator + CRDs) must be installed separately before installing this chart.
+dependencies:
+  - name: valkey-operator
+    alias: operator
+    version: "0.4.0"
+    repository: https://valkey.io/valkey-helm/
+    condition: operator.enabled

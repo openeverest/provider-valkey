@@ -1,0 +1,8 @@
+# generated binaries
+bin/
+# ...except the pre-built provider binary consumed by the Tilt dev image
+!bin/provider
+# Helm chart dependencies
+charts/
+# test artifacts
+/tmp/
