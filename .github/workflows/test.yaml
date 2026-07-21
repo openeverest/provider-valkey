@@ -33,11 +33,10 @@ jobs:
       - name: Install prerequisites
         run: |
           # Install OpenEverest CRDs
-          kubectl apply -f https://raw.githubusercontent.com/openeverest/openeverest/v2/config/crd/bases/core.openeverest.io_providers.yaml
-          kubectl apply -f https://raw.githubusercontent.com/openeverest/openeverest/v2/config/crd/bases/core.openeverest.io_instances.yaml
+          kubectl apply -f https://raw.githubusercontent.com/openeverest/openeverest/release-2.0/config/crd/bases/core.openeverest.io_providers.yaml
+          kubectl apply -f https://raw.githubusercontent.com/openeverest/openeverest/release-2.0/config/crd/bases/core.openeverest.io_instances.yaml
 
-          # TODO: Install your operator
-          # kubectl apply -f https://example.com/operator/deploy/bundle.yaml
+          # The valkey-operator CRDs are bundled with the provider Helm chart.
 
           # Install Provider via Helm
           make helm-install
