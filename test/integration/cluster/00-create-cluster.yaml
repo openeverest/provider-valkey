@@ -1,0 +1,24 @@
+# Create a sharded (cluster) Valkey Instance and let the provider translate it
+# into a ValkeyCluster CR with the requested number of shards.
+apiVersion: core.openeverest.io/v1alpha1
+kind: Instance
+metadata:
+  name: test-valkey-cluster
+spec:
+  provider: valkey
+  topology:
+    type: cluster
+    config:
+      numShards: 3
+  components:
+    engine:
+      type: valkey
+      replicas: 1
+      resources:
+        limits:
+          cpu: "1"
+          memory: 2Gi
+      storage:
+        size: 10Gi
+    monitoring:
+      type: exporter

@@ -1,0 +1,14 @@
+# Once the ValkeyCluster reports Ready, the provider must move the Instance to
+# the Ready phase.
+apiVersion: kuttl.dev/v1
+kind: TestAssert
+timeout: 60
+collectors:
+  - command: kubectl get instance/test-valkey-replication -n ${NAMESPACE} -o yaml
+---
+apiVersion: core.openeverest.io/v1alpha1
+kind: Instance
+metadata:
+  name: test-valkey-replication
+status:
+  phase: Ready

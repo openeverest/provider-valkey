@@ -1,0 +1,22 @@
+# Create a single-shard (replication) Valkey Instance and let the provider
+# translate it into a ValkeyCluster CR.
+apiVersion: core.openeverest.io/v1alpha1
+kind: Instance
+metadata:
+  name: test-valkey-replication
+spec:
+  provider: valkey
+  topology:
+    type: replication
+  components:
+    engine:
+      type: valkey
+      replicas: 1
+      resources:
+        limits:
+          cpu: "1"
+          memory: 2Gi
+      storage:
+        size: 10Gi
+    monitoring:
+      type: exporter

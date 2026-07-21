@@ -1,0 +1,7 @@
+# Simulate the valkey-operator marking the cluster ready so the provider can
+# propagate a Ready phase back to the Instance.
+apiVersion: kuttl.dev/v1
+kind: TestStep
+timeout: 30
+commands:
+  - command: kubectl patch valkeycluster/test-valkey-cluster -n ${NAMESPACE} --subresource status --type merge -p '{"status":{"state":"Ready","shards":3,"readyShards":3}}'
