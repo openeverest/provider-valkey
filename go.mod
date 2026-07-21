@@ -4,7 +4,7 @@ go 1.26.2
 
 require (
 	github.com/openeverest/openeverest/v2 v2.0.0-dev.1.0.20260706074601-101663f7c5e1
-	github.com/valkey-io/valkey-operator v0.0.0
+	github.com/valkey-io/valkey-operator v0.4.0
 	k8s.io/apimachinery v0.36.0
 	sigs.k8s.io/controller-runtime v0.24.0
 )
@@ -113,6 +113,3 @@ require (
 )
 
 tool github.com/openeverest/provider-sdk
-
-// The valkey-operator module is not yet published; use the local checkout.
-replace github.com/valkey-io/valkey-operator => ../valkey-operator
