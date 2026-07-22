@@ -42,7 +42,7 @@ jobs:
     steps:
       - name: Validate input
         run: |
-          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9][a-zA-Z0-9.-]*)?$'; then
+          if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9][a-zA-Z0-9.-]*)?$ ]]; then
             echo "Wrong version format provided, please use \"X.Y.Z\" for a release or \"X.Y.Z-<suffix>\" (e.g. X.Y.Z-rc1, X.Y.Z-dev) for a dev build"
             exit 1
           fi
