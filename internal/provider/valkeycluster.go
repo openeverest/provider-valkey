@@ -78,7 +78,7 @@ func buildClusterSpec(c *controller.Context) (valkeyv1alpha1.ValkeyClusterSpec, 
 
 	// Pass through any custom Valkey configuration parameters.
 	var engineCfg components.ValkeyEngineConfig
-	if c.TryDecodeComponentCustomSpec(engine, &engineCfg) && len(engineCfg.Config) > 0 {
+	if c.TryDecodeComponentParameters(engine, &engineCfg) && len(engineCfg.Config) > 0 {
 		spec.Config = engineCfg.Config
 	}
 
@@ -156,7 +156,7 @@ func resolveShards(c *controller.Context) (int32, error) {
 	}
 
 	var cfg cluster.ClusterTopologyConfig
-	if c.TryDecodeTopologyConfig(&cfg) && cfg.NumShards > 0 {
+	if c.TryDecodeTopologyParameters(&cfg) && cfg.NumShards > 0 {
 		return cfg.NumShards, nil
 	}
 	return defaultClusterShards, nil

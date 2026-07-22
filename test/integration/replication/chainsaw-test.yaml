@@ -1,0 +1,45 @@
+---
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: replication
+spec:
+  description: |
+    Lifecycle of a replication (single-shard) Valkey Instance: create it, verify
+    the provider derives a ValkeyCluster with one shard, simulate the operator
+    marking the cluster ready, verify the Instance reaches Ready, and verify the
+    ValkeyCluster is garbage collected on deletion.
+  catch:
+    - script:
+        content: kubectl -n $NAMESPACE get instance,valkeycluster -o yaml
+  steps:
+    - name: create-cluster
+      try:
+        - apply:
+            file: 00-create-cluster.yaml
+        - assert:
+            file: 00-assert.yaml
+
+    # Simulate the valkey-operator marking the cluster ready so the provider can
+    # propagate a Ready phase back to the Instance.
+    - name: cluster-ready
+      try:
+        - script:
+            content: |
+              kubectl patch valkeycluster/test-valkey-replication --subresource status -n $NAMESPACE \
+                -p '{"status":{"state":"Ready","shards":1,"readyShards":1}}' --type=merge
+        - assert:
+            file: 10-assert.yaml
+
+    - name: delete-cluster
+      try:
+        - script:
+            content: kubectl -n $NAMESPACE delete instance/test-valkey-replication --wait=false
+        - error:
+            file: 20-errors.yaml
+        - wait:
+            apiVersion: core.openeverest.io/v1alpha1
+            kind: Instance
+            name: test-valkey-replication
+            for:
+              deletion: {}

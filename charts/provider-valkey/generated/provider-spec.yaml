@@ -16,13 +16,14 @@ spec:
           version: 8.1.1
   components:
     engine:
-      customSpecSchema:
-        properties:
-          config:
-            additionalProperties:
-              type: string
-            type: object
-        type: object
+      parametersSchema:
+        openAPIV3Schema:
+          properties:
+            config:
+              additionalProperties:
+                type: string
+              type: object
+          type: object
       type: valkey
     monitoring:
       type: exporter
@@ -32,12 +33,13 @@ spec:
         engine: {}
         monitoring:
           optional: true
-      configSchema:
-        properties:
-          numShards:
-            format: int32
-            type: integer
-        type: object
+      parametersSchema:
+        openAPIV3Schema:
+          properties:
+            numShards:
+              format: int32
+              type: integer
+          type: object
     replication:
       components:
         engine: {}

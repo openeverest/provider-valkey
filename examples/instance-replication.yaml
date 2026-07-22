@@ -13,8 +13,9 @@ metadata:
   name: valkey-replication
   namespace: default
 spec:
-  # Provider identifier
-  provider: valkey
+  # Provider reference
+  providerRef:
+    name: valkey
 
   # High-level version bundle — selects a curated, pre-validated set of
   # component versions. Omit to use the provider's default bundle.
@@ -41,7 +42,7 @@ spec:
         size: 10Gi
         # storageClass: standard
       # Optional Valkey configuration overrides.
-      # customSpec:
+      # parameters:
       #   config:
       #     maxmemory-policy: allkeys-lru
 

@@ -13,7 +13,7 @@ components:
   # engine runs the Valkey server and backs the ValkeyCluster resource.
   engine:
     type: valkey
-    customSpecSchema: ValkeyEngineConfig
+    parametersSchema: ValkeyEngineConfig
   # monitoring enables the Prometheus metrics exporter sidecar on each pod.
   monitoring:
     type: exporter

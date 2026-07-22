@@ -5,7 +5,8 @@ kind: Instance
 metadata:
   name: test-valkey-replication
 spec:
-  provider: valkey
+  providerRef:
+    name: valkey
   topology:
     type: replication
   components:

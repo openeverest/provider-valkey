@@ -14,8 +14,9 @@ metadata:
   name: valkey-cluster
   namespace: default
 spec:
-  # Provider identifier
-  provider: valkey
+  # Provider reference
+  providerRef:
+    name: valkey
 
   # High-level version bundle — selects a curated, pre-validated set of
   # component versions. Omit to use the provider's default bundle.
@@ -24,7 +25,7 @@ spec:
   # Topology configuration — a sharded Valkey Cluster (minimum 3 shards).
   topology:
     type: cluster
-    config:
+    parameters:
       numShards: 3
 
   components:
@@ -44,7 +45,7 @@ spec:
         size: 10Gi
         # storageClass: standard
       # Optional Valkey configuration overrides.
-      # customSpec:
+      # parameters:
       #   config:
       #     maxmemory-policy: allkeys-lru
 

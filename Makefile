@@ -101,6 +101,8 @@ docker-push: ## Push docker image.
 
 .PHONY: helm-deps
 helm-deps: ## Download/update Helm chart dependencies.
+	helm repo add valkey-helm https://valkey.io/valkey-helm/ >/dev/null 2>&1 || true
+	helm repo update valkey-helm >/dev/null 2>&1 || true
 	helm dependency build $(CHART_DIR)
 
 .PHONY: helm-install
@@ -121,9 +123,30 @@ helm-template: helm-deps ## Render Helm chart templates locally (dry-run).
 
 ##@ Testing
 
+OPENEVEREST_BRANCH ?= release-2.0
+
+.PHONY: install-test-crds
+install-test-crds: helm-deps ## Install the CRDs required by the integration tests.
+	kubectl apply -f https://raw.githubusercontent.com/openeverest/openeverest/$(OPENEVEREST_BRANCH)/config/crd/bases/core.openeverest.io_providers.yaml
+	kubectl apply -f https://raw.githubusercontent.com/openeverest/openeverest/$(OPENEVEREST_BRANCH)/config/crd/bases/core.openeverest.io_instances.yaml
+	# The ValkeyCluster CRD is bundled with the valkey-operator subchart. The
+	# integration tests simulate the operator by patching status, so the
+	# operator itself is not deployed.
+	tar -xzf $(CHART_DIR)/charts/valkey-operator-*.tgz -O valkey-operator/crds/valkey.io_valkeyclusters.yaml | kubectl apply -f -
+
+.PHONY: install-provider-cr
+install-provider-cr: generate ## Install the Provider CR from the generated provider spec.
+	{ \
+		echo 'apiVersion: core.openeverest.io/v1alpha1'; \
+		echo 'kind: Provider'; \
+		echo 'metadata:'; \
+		echo '  name: valkey'; \
+		cat $(CHART_DIR)/generated/provider-spec.yaml; \
+	} | kubectl apply -f -
+
 .PHONY: test-integration
-test-integration: ## Run integration tests (kuttl) against a running cluster.
-	. ./test/vars.sh && kubectl kuttl test --config ./test/integration/kuttl.yaml
+test-integration: ## Run integration tests (chainsaw) against a running cluster.
+	. ./test/vars.sh && chainsaw test --config ./test/integration/.chainsaw.yaml ./test/integration
 
 ##@ Local Development Cluster
 

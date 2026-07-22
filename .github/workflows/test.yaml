@@ -32,19 +32,20 @@ jobs:
 
       - name: Install prerequisites
         run: |
-          # Install OpenEverest CRDs
-          kubectl apply -f https://raw.githubusercontent.com/openeverest/openeverest/release-2.0/config/crd/bases/core.openeverest.io_providers.yaml
-          kubectl apply -f https://raw.githubusercontent.com/openeverest/openeverest/release-2.0/config/crd/bases/core.openeverest.io_instances.yaml
+          # Install the OpenEverest CRDs, the bundled ValkeyCluster CRD, and the
+          # Provider CR. The integration tests simulate the valkey-operator by
+          # patching ValkeyCluster status, so the operator is not deployed.
+          make install-test-crds
+          make install-provider-cr
 
-          # The valkey-operator CRDs are bundled with the provider Helm chart.
-
-          # Install Provider via Helm
-          make helm-install
-
-      - name: Install kuttl
+      - name: Install chainsaw
         run: |
-          curl -Lo /usr/local/bin/kubectl-kuttl https://github.com/kudobuilder/kuttl/releases/latest/download/kubectl-kuttl_linux_amd64
-          chmod +x /usr/local/bin/kubectl-kuttl
+          ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+          VERSION="0.2.15"
+          curl -fsSL -o /tmp/chainsaw.tar.gz "https://github.com/kyverno/chainsaw/releases/download/v${VERSION}/chainsaw_linux_${ARCH}.tar.gz"
+          tar -xzf /tmp/chainsaw.tar.gz -C /usr/local/bin chainsaw
+          chmod +x /usr/local/bin/chainsaw
+          chainsaw version
 
       - name: Run provider in background
         run: |
@@ -53,6 +54,14 @@ jobs:
 
       - name: Run integration tests
         run: make test-integration
+
+      - name: Upload chainsaw report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chainsaw-report-${{ github.run_id }}
+          path: /tmp/chainsaw-report*.xml
+          retention-days: 7
 
       - name: Cleanup
         if: always()

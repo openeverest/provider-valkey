@@ -1,12 +1,5 @@
 # The provider must reconcile the Instance into a ValkeyCluster with a single
 # shard (replication topology) and one replica per shard.
-apiVersion: kuttl.dev/v1
-kind: TestAssert
-timeout: 60
-collectors:
-  - command: kubectl get instance/test-valkey-replication -n ${NAMESPACE} -o yaml
-  - command: kubectl get valkeycluster/test-valkey-replication -n ${NAMESPACE} -o yaml
----
 apiVersion: valkey.io/v1alpha1
 kind: ValkeyCluster
 metadata:

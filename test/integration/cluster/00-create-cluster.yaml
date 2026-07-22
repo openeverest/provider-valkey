@@ -1,14 +1,15 @@
-# Create a sharded (cluster) Valkey Instance and let the provider translate it
-# into a ValkeyCluster CR with the requested number of shards.
+# Create a multi-shard (cluster) Valkey Instance and let the provider translate
+# it into a ValkeyCluster CR.
 apiVersion: core.openeverest.io/v1alpha1
 kind: Instance
 metadata:
   name: test-valkey-cluster
 spec:
-  provider: valkey
+  providerRef:
+    name: valkey
   topology:
     type: cluster
-    config:
+    parameters:
       numShards: 3
   components:
     engine:

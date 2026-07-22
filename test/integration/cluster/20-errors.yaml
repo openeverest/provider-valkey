@@ -1,9 +1,5 @@
 # The ValkeyCluster must be garbage collected after the Instance is deleted.
-# Any object listed here that still exists causes the step to fail.
-apiVersion: kuttl.dev/v1
-kind: TestAssert
-timeout: 60
----
+# Referenced by the `error` step: if it still exists, the step fails.
 apiVersion: valkey.io/v1alpha1
 kind: ValkeyCluster
 metadata:

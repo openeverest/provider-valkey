@@ -1,8 +1,0 @@
-# Deleting the Instance must trigger cleanup of the ValkeyCluster.
-apiVersion: kuttl.dev/v1
-kind: TestStep
-timeout: 30
-delete:
-  - apiVersion: core.openeverest.io/v1alpha1
-    kind: Instance
-    name: test-valkey-cluster

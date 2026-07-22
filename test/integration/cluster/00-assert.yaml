@@ -1,12 +1,5 @@
-# The provider must reconcile the Instance into a ValkeyCluster with the
-# requested number of shards (cluster topology).
-apiVersion: kuttl.dev/v1
-kind: TestAssert
-timeout: 60
-collectors:
-  - command: kubectl get instance/test-valkey-cluster -n ${NAMESPACE} -o yaml
-  - command: kubectl get valkeycluster/test-valkey-cluster -n ${NAMESPACE} -o yaml
----
+# The provider must reconcile the Instance into a ValkeyCluster with the number
+# of shards requested by the cluster topology (numShards: 3).
 apiVersion: valkey.io/v1alpha1
 kind: ValkeyCluster
 metadata:
