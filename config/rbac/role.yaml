@@ -16,8 +16,12 @@ rules:
   - secrets
   - services
   verbs:
+  - create
+  - delete
   - get
   - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - ""
@@ -26,6 +30,14 @@ rules:
   verbs:
   - create
   - patch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - coordination.k8s.io
   resources:

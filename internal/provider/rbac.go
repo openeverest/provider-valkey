@@ -20,5 +20,7 @@ package provider
 // +kubebuilder:rbac:groups=valkey.io,resources=valkeyclusters/status,verbs=get
 // +kubebuilder:rbac:groups=valkey.io,resources=valkeyclusters/finalizers,verbs=update
 
-// Core resources used to read connection endpoints and pass through config.
-// +kubebuilder:rbac:groups="",resources=services;secrets;configmaps,verbs=get;list;watch
+// Core resources used to read connection endpoints, pass through config, and
+// write the connection secret managed by the provider-runtime.
+// +kubebuilder:rbac:groups="",resources=secrets;configmaps;services,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
