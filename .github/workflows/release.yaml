@@ -157,50 +157,9 @@ jobs:
               $PROD_IMAGE:latest-arm64
           fi
 
-  release-chart:
-    name: Release Helm chart
-    needs: [prepare, create-manifests]
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: write
-    env:
-      VERSION: ${{ needs.prepare.outputs.version }}
-      IS_RC: ${{ needs.prepare.outputs.is_rc }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
-        with:
-          fetch-depth: 0
-
-      - name: Configure Git
-        run: |
-          git config user.name "$GITHUB_ACTOR"
-          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
-
-      - name: Install Helm
-        uses: azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2 # v5.0.0
-
-      - name: Prepare RC chart
-        if: env.IS_RC == 'true'
-        run: |
-          cd charts/provider-valkey
-          VERSION=${{ env.VERSION }} make release-dev
-
-      - name: Prepare release chart
-        if: env.IS_RC == 'false'
-        run: |
-          cd charts/provider-valkey
-          VERSION=${{ env.VERSION }} make release
-
-      - name: Release chart
-        uses: helm/chart-releaser-action@cae68fefc6b5f367a0275617c9f83181ba54714f # v1.7.0
-        env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-
   finalize:
     name: Update README version
-    needs: [prepare, release-chart]
+    needs: [prepare, create-manifests]
     if: needs.prepare.outputs.is_rc == 'false'
     runs-on: ubuntu-latest
     timeout-minutes: 5
