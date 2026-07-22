@@ -12,7 +12,7 @@ Registry on every release.
 ```bash
 helm install provider-valkey \
   oci://ghcr.io/openeverest/charts/provider-valkey \
-  --version 0.1.0 \
+  --version 0.1.3 \
   --create-namespace
 ```
 
@@ -21,7 +21,7 @@ Upgrade to a newer chart version:
 ```bash
 helm upgrade provider-valkey \
   oci://ghcr.io/openeverest/charts/provider-valkey \
-  --version 0.1.0
+  --version 0.1.3
 ```
 
 Uninstall:
