@@ -51,12 +51,15 @@ lifecycle work is delegated to the operator.
 
 ## Capabilities
 
+What you can do to a running instance through the `Instance` API. Upgrading the
+provider itself is covered under [Installation](#installation).
+
 | Capability | Status | Notes |
 |---|---|---|
 | Provisioning | ✅ | |
 | Horizontal scaling | ✅ | `spec.components.engine.replicas`; shard count via the `cluster` topology |
 | Vertical scaling (CPU / memory) | ✅ | `spec.components.engine.resources` |
-| Version upgrades | ✅ | change `spec.version`; see [Versions](#versions) |
+| Version upgrades | ✅ | of the deployed Valkey version — change `spec.version`; see [Versions](#versions) |
 | Custom configuration | ✅ | pass-through `config` map on the engine component |
 | Monitoring | ✅ | Prometheus exporter, via the optional `monitoring` component |
 | TLS | ❌ | operator-managed; not exposed through the Instance API |
