@@ -12,16 +12,14 @@ Registry on every release.
 ```bash
 helm install provider-valkey \
   oci://ghcr.io/openeverest/charts/provider-valkey \
-  --version 0.1.3 \
   --create-namespace
 ```
 
-Upgrade to a newer chart version:
+Upgrade to the latest chart version:
 
 ```bash
 helm upgrade provider-valkey \
-  oci://ghcr.io/openeverest/charts/provider-valkey \
-  --version 0.1.3
+  oci://ghcr.io/openeverest/charts/provider-valkey
 ```
 
 Uninstall:
@@ -86,9 +84,9 @@ charts/provider-valkey/     # Helm chart for deployment
   templates/               # Helm templates
 .github/
   workflows/
-    build.yaml             # CI build
-    test.yaml              # CI integration tests
-    publish.yaml           # Dev image + dev chart on push to main
+    ci.yaml                # CI build
+    integration-test.yaml  # CI integration tests
+    publish.yaml           # Dev image on push to main
     release.yaml           # Manual release: images, chart, git tag, README stamp
     oci-release.yaml       # Push Helm chart as OCI artifact on tag
 examples/

@@ -7,7 +7,7 @@ $(LOCALBIN):
 CONTAINER_TOOL ?= docker
 
 # Image URL to use for building/pushing image targets
-IMG ?= ghcr.io/openeverest/provider-valkey-dev:latest
+IMG ?= ghcr.io/openeverest/provider-valkey:latest
 
 # controller-gen version
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
