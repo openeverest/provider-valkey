@@ -47,13 +47,32 @@ jobs:
           chmod +x /usr/local/bin/chainsaw
           chainsaw version
 
+      - name: Build provider
+        run: make build
+
       - name: Run provider in background
         run: |
-          make run &
-          sleep 5
+          ./bin/provider > /tmp/provider.log 2>&1 &
+          echo "Waiting for the provider to become ready..."
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8082/readyz >/dev/null 2>&1; then
+              echo "Provider ready after ~$((i * 2))s"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Provider did not become ready in time"
+          cat /tmp/provider.log || true
+          exit 1
 
       - name: Run integration tests
         run: make test-integration
+
+      - name: Print provider logs on failure
+        if: failure()
+        run: |
+          echo "===== provider.log ====="
+          cat /tmp/provider.log || true
 
       - name: Upload chainsaw report on failure
         if: failure()
