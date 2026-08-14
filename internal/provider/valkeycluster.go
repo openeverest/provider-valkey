@@ -90,6 +90,18 @@ func buildClusterSpec(c *controller.Context) (valkeyv1alpha1.ValkeyClusterSpec, 
 	}
 	spec.Exporter = exporter
 
+	// Transport encryption is on by default; the certificate secret is created
+	// by ensureTLSSecret during Sync.
+	if tlsEnabled(c) {
+		spec.Networking = &valkeyv1alpha1.NetworkingSpec{
+			TLS: &valkeyv1alpha1.TLSConfig{
+				Certificate: valkeyv1alpha1.CertificateRef{
+					SecretName: tlsSecretName(c.Name()),
+				},
+			},
+		}
+	}
+
 	return spec, nil
 }
 
@@ -164,14 +176,30 @@ func resolveShards(c *controller.Context) (int32, error) {
 
 // buildConnectionDetails returns the well-known connection details for the
 // cluster's headless Service. Authentication is not configured in this version
-// of the provider, so no credentials are included.
-func buildConnectionDetails(c *controller.Context) controller.ConnectionDetails {
+// of the provider, so no credentials are included. When transport encryption
+// is enabled the URI uses the rediss:// scheme and the CA certificate is
+// published so clients can verify the server.
+func buildConnectionDetails(c *controller.Context) (controller.ConnectionDetails, error) {
 	host := fmt.Sprintf("%s%s.%s.svc.cluster.local", headlessServicePrefix, c.Name(), c.Namespace())
-	return controller.ConnectionDetails{
+	cd := controller.ConnectionDetails{
 		Type:     "valkey",
 		Provider: common.ProviderName,
 		Host:     host,
 		Port:     valkeyPort,
 		URI:      fmt.Sprintf("redis://%s:%s", host, valkeyPort),
 	}
+
+	if tlsEnabled(c) {
+		ca, err := readCA(c)
+		if err != nil {
+			return controller.ConnectionDetails{}, err
+		}
+		cd.URI = fmt.Sprintf("rediss://%s:%s", host, valkeyPort)
+		cd.AdditionalProperties = map[string]string{
+			"ssl":          "true",
+			tlsSecretKeyCA: string(ca),
+		}
+	}
+
+	return cd, nil
 }

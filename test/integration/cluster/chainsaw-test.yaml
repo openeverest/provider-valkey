@@ -19,6 +19,15 @@ spec:
             file: 00-create-cluster.yaml
         - assert:
             file: 00-assert.yaml
+        # The provider must self-generate the TLS secret and its CA must be a
+        # valid certificate.
+        - assert:
+            file: 01-assert-tls-secret.yaml
+        - script:
+            content: |
+              set -eu
+              kubectl -n $NAMESPACE get secret test-valkey-cluster-tls \
+                -o jsonpath='{.data.ca\.crt}' | base64 -d | grep -q 'BEGIN CERTIFICATE'
 
     # Simulate the valkey-operator marking the cluster ready so the provider can
     # propagate a Ready phase back to the Instance.

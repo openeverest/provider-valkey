@@ -45,9 +45,14 @@ spec:
         size: 10Gi
         # storageClass: standard
       # Optional Valkey configuration overrides.
+      # Transport encryption (TLS) is enabled by default; the provider generates
+      # a self-signed CA and server certificate. Set tls.enabled to false to
+      # disable it.
       # parameters:
       #   config:
       #     maxmemory-policy: allkeys-lru
+      #   tls:
+      #     enabled: false
 
     # Metrics exporter sidecar (optional)
     monitoring:

@@ -10,3 +10,7 @@ spec:
   replicas: 1
   exporter:
     enabled: true
+  networking:
+    tls:
+      certificate:
+        secretName: test-valkey-cluster-tls

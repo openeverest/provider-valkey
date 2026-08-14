@@ -70,6 +70,13 @@ func (p *Provider) Sync(c *controller.Context) error {
 	l := log.FromContext(c.Context())
 	l.Info("Syncing instance", "name", c.Name())
 
+	// Provision the self-signed TLS material before the cluster references it.
+	if tlsEnabled(c) {
+		if err := ensureTLSSecret(c); err != nil {
+			return err
+		}
+	}
+
 	spec, err := buildClusterSpec(c)
 	if err != nil {
 		return err
@@ -95,7 +102,11 @@ func (p *Provider) Status(c *controller.Context) (controller.Status, error) {
 
 	switch vc.Status.State {
 	case valkeyv1alpha1.ClusterStateReady:
-		return controller.ReadyWithConnectionDetails(buildConnectionDetails(c)), nil
+		cd, err := buildConnectionDetails(c)
+		if err != nil {
+			return controller.Provisioning("Waiting for TLS certificate"), nil
+		}
+		return controller.ReadyWithConnectionDetails(cd), nil
 	case valkeyv1alpha1.ClusterStateFailed:
 		return controller.Failed(statusMessage(vc, "cluster failed")), nil
 	case valkeyv1alpha1.ClusterStateDegraded:
