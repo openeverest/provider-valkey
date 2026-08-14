@@ -16,4 +16,18 @@ type ValkeyEngineConfig struct {
 	// TLS, and ACL settings are ignored.
 	// +optional
 	Config map[string]string `json:"config,omitempty"`
+
+	// TLS configures transport encryption for the Valkey instance. Transport
+	// encryption is enabled by default; the provider generates a self-signed
+	// certificate authority and server certificate when no external secret is
+	// present.
+	// +optional
+	TLS *ValkeyTLSConfig `json:"tls,omitempty"`
+}
+
+// ValkeyTLSConfig configures in-transit encryption for the Valkey instance.
+type ValkeyTLSConfig struct {
+	// Enabled turns transport encryption on or off. Defaults to true when unset.
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
 }

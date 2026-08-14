@@ -4,3 +4,10 @@ apiVersion: valkey.io/v1alpha1
 kind: ValkeyCluster
 metadata:
   name: test-valkey-cluster
+---
+# The self-generated TLS secret is owned by the Instance and must be garbage
+# collected alongside it.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: test-valkey-cluster-tls

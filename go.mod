@@ -4,7 +4,7 @@ go 1.26.2
 
 require (
 	github.com/openeverest/openeverest/v2 v2.0.0-dev.1.0.20260721150452-3ea180918896
-	github.com/valkey-io/valkey-operator v0.4.0
+	github.com/valkey-io/valkey-operator v0.5.0
 	k8s.io/apimachinery v0.36.0
 	sigs.k8s.io/controller-runtime v0.24.0
 )
