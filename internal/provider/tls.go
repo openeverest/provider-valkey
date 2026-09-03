@@ -55,15 +55,15 @@ func tlsSecretName(instance string) string {
 
 // tlsEnabled reports whether transport encryption is enabled for the instance.
 // TLS is on by default and can be turned off with the engine component's
-// tls.enabled=false.
+// tls.mode=disabled.
 func tlsEnabled(c *controller.Context) bool {
 	engine, ok := c.Instance().Spec.Components[common.ComponentEngine]
 	if !ok {
 		return true
 	}
 	var cfg components.ValkeyEngineConfig
-	if c.TryDecodeComponentParameters(engine, &cfg) && cfg.TLS != nil && cfg.TLS.Enabled != nil {
-		return *cfg.TLS.Enabled
+	if c.TryDecodeComponentParameters(engine, &cfg) && cfg.TLS != nil {
+		return cfg.TLS.Mode != "disabled"
 	}
 	return true
 }

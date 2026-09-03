@@ -20,6 +20,7 @@ import (
 	corev1alpha1 "github.com/openeverest/openeverest/v2/api/core/v1alpha1"
 	"github.com/openeverest/openeverest/v2/provider-runtime/controller"
 	valkeyv1alpha1 "github.com/valkey-io/valkey-operator/api/v1alpha1"
+	"k8s.io/utils/ptr"
 
 	"github.com/openeverest/provider-valkey/definition/components"
 	"github.com/openeverest/provider-valkey/definition/topologies/cluster"
@@ -94,9 +95,11 @@ func buildClusterSpec(c *controller.Context) (valkeyv1alpha1.ValkeyClusterSpec, 
 	// by ensureTLSSecret during Sync.
 	if tlsEnabled(c) {
 		spec.Networking = &valkeyv1alpha1.NetworkingSpec{
-			TLS: &valkeyv1alpha1.TLSConfig{
-				Certificate: valkeyv1alpha1.CertificateRef{
-					SecretName: tlsSecretName(c.Name()),
+			TLS: &valkeyv1alpha1.TLSSpec{
+				Certificates: valkeyv1alpha1.TLSCertificates{
+					Server: valkeyv1alpha1.CertificateSource{
+						SecretName: tlsSecretName(c.Name()),
+					},
 				},
 			},
 		}
@@ -110,10 +113,10 @@ func buildClusterSpec(c *controller.Context) (valkeyv1alpha1.ValkeyClusterSpec, 
 func buildExporterSpec(c *controller.Context) (valkeyv1alpha1.ExporterSpec, error) {
 	monitoring, ok := c.Instance().Spec.Components[common.ComponentMonitoring]
 	if !ok {
-		return valkeyv1alpha1.ExporterSpec{Enabled: false}, nil
+		return valkeyv1alpha1.ExporterSpec{Enabled: ptr.To(false)}, nil
 	}
 
-	exporter := valkeyv1alpha1.ExporterSpec{Enabled: true}
+	exporter := valkeyv1alpha1.ExporterSpec{Enabled: ptr.To(true)}
 
 	if monitoring.Image != "" {
 		exporter.Image = monitoring.Image

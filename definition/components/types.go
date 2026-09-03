@@ -27,7 +27,10 @@ type ValkeyEngineConfig struct {
 
 // ValkeyTLSConfig configures in-transit encryption for the Valkey instance.
 type ValkeyTLSConfig struct {
-	// Enabled turns transport encryption on or off. Defaults to true when unset.
+	// Mode controls transport encryption. "enabled" (the default when unset)
+	// provisions a self-signed CA and server certificate; "disabled" turns
+	// transport encryption off.
+	// +kubebuilder:validation:Enum=enabled;disabled
 	// +optional
-	Enabled *bool `json:"enabled,omitempty"`
+	Mode string `json:"mode,omitempty"`
 }

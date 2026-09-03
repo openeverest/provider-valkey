@@ -46,13 +46,13 @@ spec:
         # storageClass: standard
       # Optional Valkey configuration overrides.
       # Transport encryption (TLS) is enabled by default; the provider generates
-      # a self-signed CA and server certificate. Set tls.enabled to false to
-      # disable it.
+      # a self-signed CA and server certificate. Set tls.mode to disabled to
+      # turn it off.
       # parameters:
       #   config:
       #     maxmemory-policy: allkeys-lru
       #   tls:
-      #     enabled: false
+      #     mode: disabled
 
     # Metrics exporter sidecar (optional)
     monitoring:

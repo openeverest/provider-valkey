@@ -133,6 +133,23 @@ ui:
             modes:
               edit:
                 disabled: true
+        tls:
+          uiType: select
+          path: spec.components.engine.parameters.tls.mode
+          fieldParams:
+            label: TLS - transport encryption
+            defaultValue: enabled
+            options:
+              - label: Enabled
+                value: enabled
+              - label: Disabled
+                value: disabled
+            modes:
+              edit:
+                disabled: true
+      componentsOrder:
+        - storageClass
+        - tls
   sectionsOrder:
     - basicInfo
     - resources
