@@ -32,6 +32,8 @@ spec:
       type: valkey
     monitoring:
       type: exporter
+  release:
+    version: 0.1.0
   topologies:
     cluster:
       components:
@@ -124,7 +126,7 @@ spec:
                   edit:
                     disabled: true
                 step: 1
-              path: spec.topology.config.numShards
+              path: spec.topology.parameters.numShards
               uiType: number
               validation:
                 int: true

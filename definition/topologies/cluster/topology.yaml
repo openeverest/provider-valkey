@@ -42,7 +42,7 @@ ui:
       components:
         numberOfShards:
           uiType: number
-          path: spec.topology.config.numShards
+          path: spec.topology.parameters.numShards
           fieldParams:
             label: Number of shards
             defaultValue: 3
