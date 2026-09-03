@@ -12,5 +12,6 @@ spec:
     enabled: true
   networking:
     tls:
-      certificate:
-        secretName: test-valkey-cluster-tls
+      certificates:
+        server:
+          secretName: test-valkey-cluster-tls

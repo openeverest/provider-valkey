@@ -25,13 +25,15 @@ spec:
               type: object
             tls:
               properties:
-                enabled:
-                  type: boolean
+                mode:
+                  type: string
               type: object
           type: object
       type: valkey
     monitoring:
       type: exporter
+  release:
+    version: 0.1.0
   topologies:
     cluster:
       components:
@@ -65,6 +67,23 @@ spec:
                     disabled: true
               path: spec.components.engine.storage.storageClass
               uiType: select
+            tls:
+              fieldParams:
+                defaultValue: enabled
+                label: TLS - transport encryption
+                modes:
+                  edit:
+                    disabled: true
+                options:
+                  - label: Enabled
+                    value: enabled
+                  - label: Disabled
+                    value: disabled
+              path: spec.components.engine.parameters.tls.mode
+              uiType: select
+          componentsOrder:
+            - storageClass
+            - tls
           description: Configure advanced settings for your database.
           label: Advanced configuration
         basicInfo:
@@ -107,7 +126,7 @@ spec:
                   edit:
                     disabled: true
                 step: 1
-              path: spec.topology.config.numShards
+              path: spec.topology.parameters.numShards
               uiType: number
               validation:
                 int: true
@@ -186,6 +205,23 @@ spec:
                     disabled: true
               path: spec.components.engine.storage.storageClass
               uiType: select
+            tls:
+              fieldParams:
+                defaultValue: enabled
+                label: TLS - transport encryption
+                modes:
+                  edit:
+                    disabled: true
+                options:
+                  - label: Enabled
+                    value: enabled
+                  - label: Disabled
+                    value: disabled
+              path: spec.components.engine.parameters.tls.mode
+              uiType: select
+          componentsOrder:
+            - storageClass
+            - tls
           description: Configure advanced settings for your database.
           label: Advanced configuration
         basicInfo:
