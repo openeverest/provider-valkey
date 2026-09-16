@@ -10,3 +10,11 @@ spec:
   replicas: 1
   exporter:
     enabled: true
+  users:
+    - name: default
+      enabled: true
+      permissions: "+@all ~* &*"
+      passwordSecret:
+        name: test-valkey-replication-auth
+        keys:
+          - default
