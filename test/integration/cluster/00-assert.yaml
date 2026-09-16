@@ -15,3 +15,11 @@ spec:
       certificates:
         server:
           secretName: test-valkey-cluster-tls
+  users:
+    - name: default
+      enabled: true
+      permissions: "+@all ~* &*"
+      passwordSecret:
+        name: test-valkey-cluster-auth
+        keys:
+          - default
