@@ -77,6 +77,11 @@ func (p *Provider) Sync(c *controller.Context) error {
 		}
 	}
 
+	// Provision the default user's password before the cluster references it.
+	if err := ensureAuthSecret(c); err != nil {
+		return err
+	}
+
 	spec, err := buildClusterSpec(c)
 	if err != nil {
 		return err
@@ -104,7 +109,7 @@ func (p *Provider) Status(c *controller.Context) (controller.Status, error) {
 	case valkeyv1alpha1.ClusterStateReady:
 		cd, err := buildConnectionDetails(c)
 		if err != nil {
-			return controller.Provisioning("Waiting for TLS certificate"), nil
+			return controller.Provisioning("Waiting for connection details"), nil
 		}
 		return controller.ReadyWithConnectionDetails(cd), nil
 	case valkeyv1alpha1.ClusterStateFailed:

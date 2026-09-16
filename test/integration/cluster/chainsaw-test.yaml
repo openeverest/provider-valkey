@@ -29,6 +29,16 @@ spec:
               kubectl -n $NAMESPACE get secret test-valkey-cluster-tls \
                 -o jsonpath='{.data.ca\.crt}' | base64 -d | grep -q 'BEGIN CERTIFICATE'
 
+        # The provider must self-generate the auth secret holding the default
+        # user's password.
+        - assert:
+            file: 02-assert-auth-secret.yaml
+        - script:
+            content: |
+              set -eu
+              test -n "$(kubectl -n $NAMESPACE get secret test-valkey-cluster-auth \
+                -o jsonpath='{.data.default}')"
+
     # Simulate the valkey-operator marking the cluster ready so the provider can
     # propagate a Ready phase back to the Instance.
     - name: cluster-ready
