@@ -54,7 +54,7 @@ All settings live in `dev/.env` (see `dev/.env.example`). Common options:
 | `INSTALL_OPENEVEREST` | `true` | Install the released OpenEverest core. |
 | `OPENEVEREST_VERSION` | _(latest)_ | Pin a specific core chart version. |
 | `PROVIDER_NAMESPACE` | `default` | Namespace for the provider + DB operator. |
-| `ENABLE_MINIO` | `false` | Deploy MinIO + a `BackupStorage` CR for backups. |
+| `ENABLE_SEAWEEDFS` | `false` | Deploy SeaweedFS + a `BackupStorage` CR for backups. |
 
 > **Note:** While OpenEverest v2 is in pre-release, the Helm repository only
 > publishes pre-release tags (e.g. `2.0.0-dev.1`). Helm's "latest" resolution
