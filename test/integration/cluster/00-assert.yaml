@@ -11,6 +11,8 @@ spec:
   exporter:
     enabled: true
   networking:
+    discovery:
+      preferredEndpointType: Hostname
     tls:
       certificates:
         server:
