@@ -46,6 +46,7 @@ lifecycle work is delegated to the operator.
 
 | provider-valkey | OpenEverest | valkey-operator | Kubernetes |
 |---|---|---|---|
+| `main` | `main` (after `2.0.0-dev.3`) | `0.7.1` | `1.31` – `1.33` |
 | `0.1.x` | `>= 2.0.0` | `0.6.0` | `1.30` – `1.33` |
 
 ## Capabilities
@@ -101,6 +102,20 @@ helm uninstall provider-valkey --namespace everest-system
 > Browse available versions on the
 > [chart package page](https://github.com/openeverest/provider-valkey/pkgs/container/charts%2Fprovider-valkey).
 
+Helm does not upgrade the CRDs of the bundled `valkey-operator`. When an upgrade moves to a
+new operator version, apply its CRDs first, otherwise the operator cannot finish rolling the
+clusters:
+
+```bash
+helm pull oci://ghcr.io/openeverest/charts/provider-valkey --version <chart-version> --untar
+tar -xzf provider-valkey/charts/valkey-operator-*.tgz -O valkey-operator/crds/ \
+  | kubectl apply --server-side --force-conflicts -f -
+```
+
+Upgrading to valkey-operator `0.7.x` rolls every Valkey pod once, and `cluster-node-timeout`
+moves to the Valkey default of 15 seconds unless set via
+`components.engine.parameters.config`.
+
 Uninstalling the chart does **not** delete running `Instance` resources or their data.
 
 ## Usage
@@ -155,6 +170,20 @@ per-instance auth Secret.
 |---|---|---|
 | `replication` | ✅ | Single shard: one primary with zero or more read replicas |
 | `cluster` | | Multiple shards (minimum 3), data partitioned across primaries |
+
+## Presets
+
+The chart installs `InstancePreset` resources that pre-fill common instance shapes
+(list them with `kubectl get instancepresets.core.openeverest.io`):
+
+| Preset | Topology | Shape |
+|---|---|---|
+| `valkey-dev` | `replication` | Standalone primary, 1 CPU / 1Gi, 5Gi disk |
+| `valkey-prod-replication` | `replication` | Primary + 2 replicas, 2 CPU / 4Gi, 25Gi disk |
+| `valkey-prod-cluster` | `cluster` | 3 shards × (primary + 1 replica), 2 CPU / 4Gi, 25Gi disk |
+
+Customize or disable them via `presets` in
+[charts/provider-valkey/values.yaml](charts/provider-valkey/values.yaml).
 
 ## Versions
 

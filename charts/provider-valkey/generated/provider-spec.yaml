@@ -3,14 +3,14 @@
 spec:
   componentTypes:
     exporter:
+      defaultVersion: 1.80.0
       versions:
-        - default: true
-          image: oliver006/redis_exporter:v1.80.0
+        - image: oliver006/redis_exporter:v1.80.0
           version: 1.80.0
     valkey:
+      defaultVersion: 9.0.0
       versions:
-        - default: true
-          image: valkey/valkey:9.0.0
+        - image: valkey/valkey:9.0.0
           version: 9.0.0
         - image: valkey/valkey:8.1.1
           version: 8.1.1
@@ -32,6 +32,7 @@ spec:
       type: valkey
     monitoring:
       type: exporter
+  defaultVersion: "9.0"
   release:
     version: 0.1.0
   topologies:
@@ -317,7 +318,6 @@ spec:
     - components:
         engine: 9.0.0
         monitoring: 1.80.0
-      default: true
       name: "9.0"
     - components:
         engine: 8.1.1
