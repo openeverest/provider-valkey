@@ -171,6 +171,20 @@ per-instance auth Secret.
 | `replication` | ✅ | Single shard: one primary with zero or more read replicas |
 | `cluster` | | Multiple shards (minimum 3), data partitioned across primaries |
 
+## Presets
+
+The chart installs `InstancePreset` resources that pre-fill common instance shapes
+(list them with `kubectl get instancepresets.core.openeverest.io`):
+
+| Preset | Topology | Shape |
+|---|---|---|
+| `valkey-dev` | `replication` | Standalone primary, 1 CPU / 1Gi, 5Gi disk |
+| `valkey-prod-replication` | `replication` | Primary + 2 replicas, 2 CPU / 4Gi, 25Gi disk |
+| `valkey-prod-cluster` | `cluster` | 3 shards × (primary + 1 replica), 2 CPU / 4Gi, 25Gi disk |
+
+Customize or disable them via `presets` in
+[charts/provider-valkey/values.yaml](charts/provider-valkey/values.yaml).
+
 ## Versions
 
 | Version bundle | Default | valkey |

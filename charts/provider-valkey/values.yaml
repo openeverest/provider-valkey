@@ -100,6 +100,75 @@ affinity: {}
 provider:
   # -- The name to register for the Provider custom resource
   name: valkey
+  # -- Short identifier for the provider, used in resource names
+  # This appears in preset names (e.g., '<shortName>-dev') and can be
+  # used in other contexts where a short concise provider identifier is needed.
+  shortName: valkey
+
+# -- Default instance presets configuration
+# Each preset must have 'name', 'enabled', and 'spec' fields.
+# The 'spec' field contains the full InstancePresetSpec.
+# Note: The provider shortName will be automatically added to each preset name.
+presets:
+    - name: dev
+      enabled: true
+      spec:
+        providerRef:
+          name: valkey
+        version: "9.0"
+        topology:
+          type: replication
+        components:
+          engine:
+            # Standalone primary, no read replicas.
+            replicas: 0
+            resources:
+              limits:
+                cpu: "1"
+                memory: 1Gi
+            storage:
+              size: 5Gi
+              # storageClass: ""  # Specify a storage class if you want to set the default
+    - name: prod-replication
+      enabled: true
+      spec:
+        providerRef:
+          name: valkey
+        version: "9.0"
+        topology:
+          type: replication
+        components:
+          engine:
+            # One primary with two read replicas.
+            replicas: 2
+            resources:
+              limits:
+                cpu: "2"
+                memory: 4Gi
+            storage:
+              size: 25Gi
+              # storageClass: ""  # Specify a storage class if you want to set the default
+    - name: prod-cluster
+      enabled: true
+      spec:
+        providerRef:
+          name: valkey
+        version: "9.0"
+        topology:
+          type: cluster
+          parameters:
+            numShards: 3
+        components:
+          engine:
+            # Replicas per shard.
+            replicas: 1
+            resources:
+              limits:
+                cpu: "2"
+                memory: 4Gi
+            storage:
+              size: 25Gi
+              # storageClass: ""  # Specify a storage class if you want to set the default
 
 # -- Additional environment variables to set on the provider container
 extraEnv: []
