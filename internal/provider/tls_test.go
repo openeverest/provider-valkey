@@ -51,6 +51,15 @@ func TestGenerateTLSMaterial(t *testing.T) {
 
 	assertSAN(t, serverCert, wantFQDN)
 	assertSAN(t, serverCert, "*."+wantFQDN)
+
+	// Nodes announce <pod>.<headless FQDN> with hostname discovery.
+	podHostname := "valkey-mycache-0-0." + wantFQDN
+	if _, err := serverCert.Verify(x509.VerifyOptions{
+		DNSName: podHostname,
+		Roots:   caPool,
+	}); err != nil {
+		t.Fatalf("server cert not verifiable for announced hostname %q: %v", podHostname, err)
+	}
 }
 
 func parseCert(t *testing.T, certPEM []byte) *x509.Certificate {

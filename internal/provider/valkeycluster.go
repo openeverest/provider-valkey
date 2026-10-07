@@ -109,9 +109,13 @@ func buildClusterSpec(c *controller.Context) (valkeyv1alpha1.ValkeyClusterSpec, 
 	spec.Exporter = exporter
 
 	// Transport encryption is on by default; the certificate secret is created
-	// by ensureTLSSecret during Sync.
+	// by ensureTLSSecret during Sync. Pod IPs in MOVED/CLUSTER SLOTS redirects
+	// fail certificate checks, so nodes announce hostnames covered by its SANs.
 	if tlsEnabled(c) {
 		spec.Networking = &valkeyv1alpha1.NetworkingSpec{
+			Discovery: &valkeyv1alpha1.DiscoverySpec{
+				PreferredEndpointType: valkeyv1alpha1.PreferredEndpointTypeHostname,
+			},
 			TLS: &valkeyv1alpha1.TLSSpec{
 				Certificates: valkeyv1alpha1.TLSCertificates{
 					Server: valkeyv1alpha1.CertificateSource{

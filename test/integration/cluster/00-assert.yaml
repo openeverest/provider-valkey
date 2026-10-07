@@ -16,6 +16,8 @@ spec:
         shard:
           mode: Required
   networking:
+    discovery:
+      preferredEndpointType: Hostname
     tls:
       certificates:
         server:

@@ -123,7 +123,8 @@ helm-template: helm-deps ## Render Helm chart templates locally (dry-run).
 
 ##@ Testing
 
-OPENEVEREST_BRANCH ?= release-2.0
+# Keep in sync with the openeverest/v2 revision pinned in go.mod.
+OPENEVEREST_BRANCH ?= main
 
 .PHONY: install-test-crds
 install-test-crds: helm-deps ## Install the CRDs required by the integration tests.
