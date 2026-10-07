@@ -13,8 +13,25 @@ config:
     engine:
       defaults:
         replicas: 1
+      supportedFields:
+        properties:
+          storage: {}
+          resources: {}
+          # Replicas of the single primary; 0 runs the primary alone.
+          replicas: {minimum: 0}
+          # The operator has no schedulerName.
+          schedulingPolicy:
+            properties:
+              affinity: {}
+              nodeSelector: {}
+              tolerations: {}
+              topologySpreadConstraints: {}
     monitoring:
       optional: true
+      # The exporter is a sidecar in the engine pods, which place it.
+      supportedFields:
+        properties:
+          resources: {}
 ui:
   sections:
     basicInfo:

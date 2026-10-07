@@ -71,6 +71,8 @@ func buildClusterSpec(c *controller.Context) (valkeyv1alpha1.ValkeyClusterSpec, 
 		spec.Resources = *engine.Resources
 	}
 
+	spec.Scheduling = buildScheduling(c.Name(), engine.SchedulingPolicy)
+
 	if engine.Storage != nil && !engine.Storage.Size.IsZero() {
 		spec.Persistence = &valkeyv1alpha1.PersistenceSpec{
 			Size:             engine.Storage.Size,
