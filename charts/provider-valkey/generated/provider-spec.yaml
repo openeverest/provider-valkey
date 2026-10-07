@@ -38,9 +38,26 @@ spec:
   topologies:
     cluster:
       components:
-        engine: {}
+        engine:
+          supportedFields:
+            openAPIV3Schema:
+              properties:
+                replicas:
+                  minimum: 0
+                resources: {}
+                schedulingPolicy:
+                  properties:
+                    affinity: {}
+                    nodeSelector: {}
+                    tolerations: {}
+                    topologySpreadConstraints: {}
+                storage: {}
         monitoring:
           optional: true
+          supportedFields:
+            openAPIV3Schema:
+              properties:
+                resources: {}
       parametersSchema:
         openAPIV3Schema:
           properties:
@@ -50,9 +67,26 @@ spec:
           type: object
     replication:
       components:
-        engine: {}
+        engine:
+          supportedFields:
+            openAPIV3Schema:
+              properties:
+                replicas:
+                  minimum: 0
+                resources: {}
+                schedulingPolicy:
+                  properties:
+                    affinity: {}
+                    nodeSelector: {}
+                    tolerations: {}
+                    topologySpreadConstraints: {}
+                storage: {}
         monitoring:
           optional: true
+          supportedFields:
+            openAPIV3Schema:
+              properties:
+                resources: {}
   uiSchema:
     cluster:
       sections:
