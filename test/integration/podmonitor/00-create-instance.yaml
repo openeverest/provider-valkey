@@ -1,0 +1,22 @@
+# A replication Instance with the metrics exporter.
+apiVersion: core.openeverest.io/v1alpha1
+kind: Instance
+metadata:
+  name: test-valkey-metrics
+spec:
+  providerRef:
+    name: valkey
+  topology:
+    type: replication
+  components:
+    engine:
+      type: valkey
+      replicas: 1
+      resources:
+        limits:
+          cpu: "1"
+          memory: 1Gi
+      storage:
+        size: 1Gi
+    monitoring:
+      type: exporter

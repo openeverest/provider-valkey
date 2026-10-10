@@ -1,0 +1,19 @@
+# Requiring client certificates without transport encryption cannot work: the
+# provider must reject the Instance before creating anything.
+apiVersion: core.openeverest.io/v1alpha1
+kind: Instance
+metadata:
+  name: test-valkey-mtls-invalid
+spec:
+  providerRef:
+    name: valkey
+  topology:
+    type: replication
+  components:
+    engine:
+      type: valkey
+      replicas: 0
+      parameters:
+        tls:
+          mode: disabled
+          clientAuth: required

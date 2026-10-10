@@ -1,0 +1,24 @@
+# A replication Instance that logs clients in by the Common Name of their
+# certificate, with client certificates still optional.
+apiVersion: core.openeverest.io/v1alpha1
+kind: Instance
+metadata:
+  name: test-valkey-mtls
+spec:
+  providerRef:
+    name: valkey
+  topology:
+    type: replication
+  components:
+    engine:
+      type: valkey
+      replicas: 1
+      resources:
+        limits:
+          cpu: "1"
+          memory: 1Gi
+      storage:
+        size: 1Gi
+      parameters:
+        tls:
+          certificateUser: cn

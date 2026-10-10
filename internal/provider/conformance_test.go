@@ -22,12 +22,12 @@ import (
 
 func TestUISchemaIsReconciled(t *testing.T) {
 	conformance.UISchemaIsReconciled(t, conformance.Config{
-		Provider: New(),
+		Provider: New(PodMonitorConfig{Enabled: true}),
 	})
 }
 
 func TestSupportedFieldsAreReconciled(t *testing.T) {
 	conformance.SupportedFieldsAreReconciled(t, conformance.Config{
-		Provider: New(),
+		Provider: New(PodMonitorConfig{Enabled: true}),
 	})
 }

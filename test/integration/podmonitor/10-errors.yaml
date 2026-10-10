@@ -1,0 +1,6 @@
+# Without the monitoring component nothing is scraped, so the PodMonitor must
+# be removed. Referenced by the `error` step: if it still exists, the step fails.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: test-valkey-metrics-metrics

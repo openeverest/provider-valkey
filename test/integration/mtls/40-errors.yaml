@@ -1,0 +1,11 @@
+# The CA and client certificate secrets are owned by the Instance and must be
+# garbage collected alongside it.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: test-valkey-mtls-tls-ca
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: test-valkey-mtls-tls-client

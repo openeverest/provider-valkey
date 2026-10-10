@@ -1,0 +1,5 @@
+# The rejected Instance must not reach the operator.
+apiVersion: valkey.io/v1alpha1
+kind: ValkeyCluster
+metadata:
+  name: test-valkey-mtls-invalid
