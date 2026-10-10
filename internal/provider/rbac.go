@@ -24,3 +24,6 @@ package provider
 // write the connection secret managed by the provider-runtime.
 // +kubebuilder:rbac:groups="",resources=secrets;configmaps;services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
+
+// Prometheus Operator PodMonitor scraping the metrics exporter sidecars.
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=podmonitors,verbs=get;list;watch;create;update;patch;delete

@@ -1,0 +1,107 @@
+---
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: mtls
+spec:
+  description: |
+    Client certificate authentication: create an Instance that maps client
+    certificates to users, verify the provider configures the operator for it,
+    issues a client certificate for the default user signed by the CA the
+    Valkey pods trust, and publishes it in the connection details. Then require
+    client certificates, verify relaxing that again is rejected, and verify an
+    Instance requiring them without TLS is rejected.
+  catch:
+    - script:
+        content: kubectl -n $NAMESPACE get instance,valkeycluster,secret -o yaml
+  steps:
+    - name: create-instance
+      try:
+        - apply:
+            file: 00-create-instance.yaml
+        - assert:
+            file: 00-assert.yaml
+        # The client certificate names the default user and is trusted by the
+        # CA in the secret mounted into the Valkey pods.
+        - script:
+            content: |
+              set -eu
+              dir=$(mktemp -d)
+              kubectl -n $NAMESPACE get secret test-valkey-mtls-tls \
+                -o jsonpath='{.data.ca\.crt}' | base64 -d > "$dir/ca.crt"
+              kubectl -n $NAMESPACE get secret test-valkey-mtls-tls-client \
+                -o jsonpath='{.data.tls\.crt}' | base64 -d > "$dir/client.crt"
+              openssl verify -purpose sslclient -CAfile "$dir/ca.crt" "$dir/client.crt"
+              openssl x509 -in "$dir/client.crt" -noout -subject | grep -Eq 'CN ?= ?default$'
+
+    # Simulate the valkey-operator marking the cluster ready so the provider
+    # publishes the connection details.
+    - name: connection-details
+      try:
+        - script:
+            content: |
+              kubectl patch valkeycluster/test-valkey-mtls --subresource status -n $NAMESPACE \
+                -p '{"status":{"state":"Ready","shards":1,"readyShards":1}}' --type=merge
+        - assert:
+            file: 10-assert.yaml
+        - script:
+            content: |
+              set -eu
+              published=$(kubectl -n $NAMESPACE get secret test-valkey-mtls-conn -o jsonpath='{.data.tls\.crt}')
+              issued=$(kubectl -n $NAMESPACE get secret test-valkey-mtls-tls-client -o jsonpath='{.data.tls\.crt}')
+              test -n "$published"
+              test "$published" = "$issued"
+              test -n "$(kubectl -n $NAMESPACE get secret test-valkey-mtls-conn -o jsonpath='{.data.tls\.key}')"
+
+    - name: require-client-certificates
+      try:
+        - patch:
+            resource:
+              apiVersion: core.openeverest.io/v1alpha1
+              kind: Instance
+              metadata:
+                name: test-valkey-mtls
+              spec:
+                components:
+                  engine:
+                    parameters:
+                      tls:
+                        clientAuth: required
+        - assert:
+            file: 20-assert.yaml
+
+    # The operator would lock itself out of the nodes that still require client
+    # certificates, so the provider must refuse and keep the cluster as it is.
+    # Depending on the setup, the admission webhook or the reconciler rejects it.
+    - name: reject-relaxing-client-certificates
+      try:
+        - script:
+            content: |
+              kubectl -n $NAMESPACE patch instance/test-valkey-mtls --type=merge \
+                -p '{"spec":{"components":{"engine":{"parameters":{"tls":{"clientAuth":"optional"}}}}}}' || true
+        - sleep:
+            duration: 5s
+        - assert:
+            file: 20-assert.yaml
+
+    - name: reject-client-certificates-without-tls
+      try:
+        - script:
+            content: kubectl -n $NAMESPACE apply -f 30-create-invalid.yaml || true
+        - sleep:
+            duration: 5s
+        - error:
+            file: 30-errors.yaml
+
+    - name: delete-instance
+      try:
+        - script:
+            content: kubectl -n $NAMESPACE delete instance/test-valkey-mtls --wait=false
+        - error:
+            file: 40-errors.yaml
+        - wait:
+            apiVersion: core.openeverest.io/v1alpha1
+            kind: Instance
+            name: test-valkey-mtls
+            for:
+              deletion: {}

@@ -1,0 +1,28 @@
+# The provider must pass the client authentication settings to the operator.
+apiVersion: valkey.io/v1alpha1
+kind: ValkeyCluster
+metadata:
+  name: test-valkey-mtls
+spec:
+  networking:
+    tls:
+      certificates:
+        server:
+          secretName: test-valkey-mtls-tls
+      clientAuth:
+        mode: Optional
+        certificateUser: CN
+---
+# The instance CA, kept apart from the secret mounted into the Valkey pods.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: test-valkey-mtls-tls-ca
+type: kubernetes.io/tls
+---
+# The client certificate issued for the default user.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: test-valkey-mtls-tls-client
+type: kubernetes.io/tls

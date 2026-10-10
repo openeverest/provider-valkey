@@ -122,6 +122,7 @@ func buildClusterSpec(c *controller.Context) (valkeyv1alpha1.ValkeyClusterSpec, 
 						SecretName: tlsSecretName(c.Name()),
 					},
 				},
+				ClientAuth: buildClientAuth(engineTLSConfig(c)),
 			},
 		}
 	}
@@ -235,6 +236,17 @@ func buildConnectionDetails(c *controller.Context) (controller.ConnectionDetails
 		cd.AdditionalProperties = map[string]string{
 			"ssl":          "true",
 			tlsSecretKeyCA: string(ca),
+		}
+
+		if clientCertificatesAccepted(engineTLSConfig(c)) {
+			certPEM, keyPEM, ok, err := readClientCert(c)
+			if err != nil {
+				return controller.ConnectionDetails{}, err
+			}
+			if ok {
+				cd.AdditionalProperties[tlsSecretKeyCert] = string(certPEM)
+				cd.AdditionalProperties[tlsSecretKeyKey] = string(keyPEM)
+			}
 		}
 	}
 

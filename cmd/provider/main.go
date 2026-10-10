@@ -16,7 +16,12 @@ func main() {
 	l := ctrl.Log.WithName("setup")
 	ctx := ctrl.SetupSignalHandler()
 
-	p := provider.New()
+	podMonitor, err := provider.PodMonitorConfigFromEnv()
+	if err != nil {
+		l.Error(err, "invalid PodMonitor configuration")
+		os.Exit(1)
+	}
+	p := provider.New(podMonitor)
 
 	r, err := reconciler.New(ctx, p,
 		// Enable HTTP server for validation and schema endpoints.

@@ -25,6 +25,10 @@ spec:
               type: object
             tls:
               properties:
+                certificateUser:
+                  type: string
+                clientAuth:
+                  type: string
                 mode:
                   type: string
               type: object
@@ -92,6 +96,30 @@ spec:
       sections:
         advanced:
           components:
+            certificateUser:
+              fieldParams:
+                defaultValue: disabled
+                label: Log in with the client certificate
+                options:
+                  - label: Disabled
+                    value: disabled
+                  - label: Certificate Common Name
+                    value: cn
+              path: spec.components.engine.parameters.tls.certificateUser
+              uiType: select
+            clientAuth:
+              fieldParams:
+                defaultValue: optional
+                label: Client certificate authentication (mTLS)
+                options:
+                  - label: Optional
+                    value: optional
+                  - label: Required
+                    value: required
+                  - label: Disabled
+                    value: disabled
+              path: spec.components.engine.parameters.tls.clientAuth
+              uiType: select
             storageClass:
               dataSource:
                 provider: storageClasses
@@ -119,6 +147,8 @@ spec:
           componentsOrder:
             - storageClass
             - tls
+            - clientAuth
+            - certificateUser
           description: Configure advanced settings for your database.
           label: Advanced configuration
         basicInfo:
@@ -231,6 +261,30 @@ spec:
       sections:
         advanced:
           components:
+            certificateUser:
+              fieldParams:
+                defaultValue: disabled
+                label: Log in with the client certificate
+                options:
+                  - label: Disabled
+                    value: disabled
+                  - label: Certificate Common Name
+                    value: cn
+              path: spec.components.engine.parameters.tls.certificateUser
+              uiType: select
+            clientAuth:
+              fieldParams:
+                defaultValue: optional
+                label: Client certificate authentication (mTLS)
+                options:
+                  - label: Optional
+                    value: optional
+                  - label: Required
+                    value: required
+                  - label: Disabled
+                    value: disabled
+              path: spec.components.engine.parameters.tls.clientAuth
+              uiType: select
             storageClass:
               dataSource:
                 provider: storageClasses
@@ -258,6 +312,8 @@ spec:
           componentsOrder:
             - storageClass
             - tls
+            - clientAuth
+            - certificateUser
           description: Configure advanced settings for your database.
           label: Advanced configuration
         basicInfo:

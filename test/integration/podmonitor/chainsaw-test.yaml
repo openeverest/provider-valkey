@@ -1,0 +1,29 @@
+---
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: podmonitor
+spec:
+  description: |
+    Prometheus scraping: create an Instance with the monitoring component,
+    verify the provider creates a PodMonitor for its exporter sidecars, then
+    remove the monitoring component and verify the PodMonitor is deleted.
+  catch:
+    - script:
+        content: kubectl -n $NAMESPACE get instance,valkeycluster,podmonitor -o yaml
+  steps:
+    - name: create-instance
+      try:
+        - apply:
+            file: 00-create-instance.yaml
+        - assert:
+            file: 00-assert.yaml
+
+    - name: remove-monitoring
+      try:
+        - script:
+            content: |
+              kubectl -n $NAMESPACE patch instance/test-valkey-metrics --type=json \
+                -p '[{"op":"remove","path":"/spec/components/monitoring"}]'
+        - error:
+            file: 10-errors.yaml

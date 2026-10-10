@@ -175,6 +175,15 @@ extraEnv: []
 # - name: MY_VAR
 #   value: "my-value"
 
+# Prometheus Operator PodMonitor created for every instance that has the
+# monitoring component. Skipped while the PodMonitor CRD is not installed.
+podMonitor:
+  # -- Create the PodMonitors
+  enabled: true
+  # -- Labels added to every PodMonitor so that the Prometheus podMonitorSelector
+  # picks them up, e.g. `release: kube-prometheus-stack`
+  labels: {}
+
 # -- Additional volume mounts to add to the provider container
 extraVolumeMounts: []
 

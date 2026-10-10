@@ -7,6 +7,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/openeverest/openeverest/v2/provider-runtime/controller"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	valkeyv1alpha1 "github.com/valkey-io/valkey-operator/api/v1alpha1"
 
 	"github.com/openeverest/provider-valkey/internal/common"
@@ -18,15 +19,19 @@ var _ controller.ProviderInterface = (*Provider)(nil)
 // Provider implements controller.ProviderInterface for the Valkey provider.
 type Provider struct {
 	controller.BaseProvider
+
+	podMonitor PodMonitorConfig
 }
 
 // New creates a new Provider instance.
-func New() *Provider {
+func New(podMonitor PodMonitorConfig) *Provider {
 	return &Provider{
+		podMonitor: podMonitor,
 		BaseProvider: controller.BaseProvider{
 			ProviderName: common.ProviderName,
 			SchemeFuncs: []func(*runtime.Scheme) error{
 				valkeyv1alpha1.AddToScheme,
+				monitoringv1.AddToScheme,
 			},
 			WatchConfigs: []controller.WatchConfig{
 				controller.WatchOwned(&valkeyv1alpha1.ValkeyCluster{}),
@@ -62,7 +67,7 @@ func (p *Provider) Validate(c *controller.Context) error {
 		}
 	}
 
-	return nil
+	return validateTLS(c)
 }
 
 // Sync creates or updates the ValkeyCluster resource from the Instance spec.
@@ -73,6 +78,9 @@ func (p *Provider) Sync(c *controller.Context) error {
 	// Provision the self-signed TLS material before the cluster references it.
 	if tlsEnabled(c) {
 		if err := ensureTLSSecret(c); err != nil {
+			return err
+		}
+		if err := ensureClientCertSecret(c); err != nil {
 			return err
 		}
 	}
@@ -91,8 +99,11 @@ func (p *Provider) Sync(c *controller.Context) error {
 		ObjectMeta: c.ObjectMeta(c.Name()),
 		Spec:       spec,
 	}
+	if err := c.Apply(vc); err != nil {
+		return err
+	}
 
-	return c.Apply(vc)
+	return syncPodMonitor(c, p.podMonitor)
 }
 
 // Status translates the ValkeyCluster status into the provider-runtime Status.

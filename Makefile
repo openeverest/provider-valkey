@@ -126,6 +126,9 @@ helm-template: helm-deps ## Render Helm chart templates locally (dry-run).
 # Keep in sync with the openeverest/v2 revision pinned in go.mod.
 OPENEVEREST_BRANCH ?= main
 
+# Keep in sync with the prometheus-operator monitoring API pinned in go.mod.
+PROMETHEUS_OPERATOR_VERSION ?= v0.94.1
+
 .PHONY: install-test-crds
 install-test-crds: helm-deps ## Install the CRDs required by the integration tests.
 	kubectl apply -f https://raw.githubusercontent.com/openeverest/openeverest/$(OPENEVEREST_BRANCH)/config/crd/bases/core.openeverest.io_providers.yaml
@@ -134,6 +137,8 @@ install-test-crds: helm-deps ## Install the CRDs required by the integration tes
 	# integration tests simulate the operator by patching status, so the
 	# operator itself is not deployed.
 	tar -xzf $(CHART_DIR)/charts/valkey-operator-*.tgz -O valkey-operator/crds/valkey.io_valkeyclusters.yaml | kubectl apply -f -
+	# The provider creates PodMonitors when the Prometheus Operator CRD exists.
+	kubectl apply --server-side -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/$(PROMETHEUS_OPERATOR_VERSION)/example/prometheus-operator-crd/monitoring.coreos.com_podmonitors.yaml
 
 .PHONY: install-provider-cr
 install-provider-cr: generate ## Install the Provider CR from the generated provider spec.

@@ -61,8 +61,9 @@ provider itself is covered under [Installation](#installation).
 | Vertical scaling (CPU / memory) | ✅ | Per-component `resources` |
 | Version upgrades | ✅ | Select a version bundle with `spec.version` |
 | Custom configuration | ✅ | Passthrough Valkey config via engine `parameters.config` |
-| Monitoring | ✅ | Optional Prometheus exporter sidecar |
+| Monitoring | ✅ | Optional Prometheus exporter sidecar, scraped through a `PodMonitor` |
 | TLS | ✅ | Self-signed CA + server certificate, on by default |
+| Mutual TLS | ✅ | Optional or required client certificates; a client certificate is issued for the default user |
 
 Stateful workloads additionally report:
 
@@ -207,6 +208,27 @@ Technology-specific knobs:
 - **Engine config** — arbitrary Valkey config keys via `components.engine.parameters.config`
   (e.g. `maxmemory-policy`). Operator-managed keys (port, TLS, ACL) are ignored.
 - **TLS** — on by default. Disable with `components.engine.parameters.tls.mode: disabled`.
+- **Mutual TLS** — `components.engine.parameters.tls.clientAuth` is `optional` (default),
+  `required`, or `disabled`. The provider issues a client certificate (`CN=default`) signed by
+  the instance CA and publishes it as `tls.crt` / `tls.key` in the connection details (and in
+  the `<instance>-tls-client` Secret). With `tls.certificateUser: cn` (Valkey 9.0+) that
+  certificate logs the client in as the `default` user without a password:
+
+  ```bash
+  valkey-cli --tls --cacert ca.crt --cert tls.crt --key tls.key -h <host> ACL WHOAMI
+  ```
+
+  The CA private key is kept in `<instance>-tls-ca`, which is never mounted into the Valkey
+  pods. Instances created before the CA key was kept cannot issue client certificates: delete
+  their `<instance>-tls` Secret to regenerate the TLS material, then restart the Valkey pods.
+  Tightening `clientAuth` to `required` on a running instance is supported; relaxing it from
+  `required` is rejected, because valkey-operator v0.7.1 stops presenting its client
+  certificate before the nodes stop requiring one and loses access to the cluster.
+- **Metrics** — with the `monitoring` component, the provider creates a `PodMonitor`
+  (`<instance>-metrics`) when the Prometheus Operator CRDs are installed. Series carry
+  `core_openeverest_io_component`, `valkey_io_shard_index` and `valkey_io_node_index`. Chart
+  values `podMonitor.enabled` and `podMonitor.labels` turn it off or label it for the
+  Prometheus `podMonitorSelector` (for kube-prometheus-stack: `release: <release-name>`).
 - **Cluster shards** — set `topology.parameters.numShards` (cluster topology only, minimum 3).
 
 ## Development

@@ -1,0 +1,11 @@
+# Requiring client certificates is passed to the operator.
+apiVersion: valkey.io/v1alpha1
+kind: ValkeyCluster
+metadata:
+  name: test-valkey-mtls
+spec:
+  networking:
+    tls:
+      clientAuth:
+        mode: Required
+        certificateUser: CN

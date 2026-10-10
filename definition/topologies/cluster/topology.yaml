@@ -164,9 +164,35 @@ ui:
             modes:
               edit:
                 disabled: true
+        clientAuth:
+          uiType: select
+          path: spec.components.engine.parameters.tls.clientAuth
+          fieldParams:
+            label: Client certificate authentication (mTLS)
+            defaultValue: optional
+            options:
+              - label: Optional
+                value: optional
+              - label: Required
+                value: required
+              - label: Disabled
+                value: disabled
+        certificateUser:
+          uiType: select
+          path: spec.components.engine.parameters.tls.certificateUser
+          fieldParams:
+            label: Log in with the client certificate
+            defaultValue: disabled
+            options:
+              - label: Disabled
+                value: disabled
+              - label: Certificate Common Name
+                value: cn
       componentsOrder:
         - storageClass
         - tls
+        - clientAuth
+        - certificateUser
   sectionsOrder:
     - basicInfo
     - resources
