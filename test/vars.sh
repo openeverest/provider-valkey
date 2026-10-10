@@ -6,7 +6,7 @@ echo "PROVIDER_ROOT_PATH=${PROVIDER_ROOT_PATH}"
 
 ## Default Valkey engine version exercised by the tests. Keep in sync with the
 ## provider's default version bundle (definition/versions.yaml).
-export VALKEY_ENGINE_VERSION=${VALKEY_ENGINE_VERSION:-"9.0.0"}
+export VALKEY_ENGINE_VERSION=${VALKEY_ENGINE_VERSION:-"9.0.6"}
 echo "VALKEY_ENGINE_VERSION=${VALKEY_ENGINE_VERSION}"
 
 ## Default Valkey engine image derived from the version above.

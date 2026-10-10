@@ -8,9 +8,14 @@ spec:
         - image: oliver006/redis_exporter:v1.80.0
           version: 1.80.0
     valkey:
-      defaultVersion: 9.0.0
+      defaultVersion: 9.0.6
       versions:
-        - image: valkey/valkey:9.0.0
+        - image: valkey/valkey:9.1.2
+          version: 9.1.2
+        - image: valkey/valkey:9.0.6
+          version: 9.0.6
+        - deprecated: true
+          image: valkey/valkey:9.0.0
           version: 9.0.0
         - image: valkey/valkey:8.1.1
           version: 8.1.1
@@ -408,7 +413,11 @@ spec:
         - advanced
   versions:
     - components:
-        engine: 9.0.0
+        engine: 9.1.2
+        monitoring: 1.80.0
+      name: "9.1"
+    - components:
+        engine: 9.0.6
         monitoring: 1.80.0
       name: "9.0"
     - components:

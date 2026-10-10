@@ -1,0 +1,21 @@
+# A replication Instance on the 9.0 version bundle.
+apiVersion: core.openeverest.io/v1alpha1
+kind: Instance
+metadata:
+  name: test-valkey-versions
+spec:
+  providerRef:
+    name: valkey
+  version: "9.0"
+  topology:
+    type: replication
+  components:
+    engine:
+      type: valkey
+      replicas: 1
+      resources:
+        limits:
+          cpu: "1"
+          memory: 1Gi
+      storage:
+        size: 1Gi

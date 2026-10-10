@@ -1,0 +1,33 @@
+---
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: versions
+spec:
+  description: |
+    Version bundles: create an Instance on the 9.0 bundle, verify the provider
+    runs the 9.0 patch release, then move it to the 9.1 bundle and verify the
+    engine image is upgraded.
+  catch:
+    - script:
+        content: kubectl -n $NAMESPACE get instance,valkeycluster -o yaml
+  steps:
+    - name: create-instance
+      try:
+        - apply:
+            file: 00-create-instance.yaml
+        - assert:
+            file: 00-assert.yaml
+
+    - name: upgrade-to-9.1
+      try:
+        - patch:
+            resource:
+              apiVersion: core.openeverest.io/v1alpha1
+              kind: Instance
+              metadata:
+                name: test-valkey-versions
+              spec:
+                version: "9.1"
+        - assert:
+            file: 10-assert.yaml

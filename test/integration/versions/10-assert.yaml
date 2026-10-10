@@ -1,0 +1,7 @@
+# Moving the Instance to the 9.1 bundle upgrades the engine image.
+apiVersion: valkey.io/v1alpha1
+kind: ValkeyCluster
+metadata:
+  name: test-valkey-versions
+spec:
+  image: valkey/valkey:9.1.2
