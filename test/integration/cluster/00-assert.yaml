@@ -5,7 +5,7 @@ kind: ValkeyCluster
 metadata:
   name: test-valkey-cluster
 spec:
-  image: valkey/valkey:9.0.0
+  image: valkey/valkey:9.0.6
   shards: 3
   replicas: 1
   exporter:

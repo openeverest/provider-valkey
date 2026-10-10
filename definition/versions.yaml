@@ -6,10 +6,15 @@
 
 componentTypes:
   valkey:
-    defaultVersion: "9.0.0"
+    defaultVersion: "9.0.6"
     versions:
+    - version: "9.1.2"
+      image: valkey/valkey:9.1.2
+    - version: "9.0.6"
+      image: valkey/valkey:9.0.6
     - version: "9.0.0"
       image: valkey/valkey:9.0.0
+      deprecated: true
     - version: "8.1.1"
       image: valkey/valkey:8.1.1
   exporter:
@@ -23,9 +28,13 @@ componentTypes:
 # The bundle named by defaultVersion is used when spec.version is omitted.
 defaultVersion: "9.0"
 versions:
+- name: "9.1"
+  components:
+    engine: "9.1.2"
+    monitoring: "1.80.0"
 - name: "9.0"
   components:
-    engine: "9.0.0"
+    engine: "9.0.6"
     monitoring: "1.80.0"
 - name: "8.1"
   components:

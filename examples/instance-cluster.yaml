@@ -20,7 +20,7 @@ spec:
 
   # High-level version bundle — selects a curated, pre-validated set of
   # component versions. Omit to use the provider's default bundle.
-  version: "9.0.0"
+  version: "9.0"
 
   # Topology configuration — a sharded Valkey Cluster (minimum 3 shards).
   topology:

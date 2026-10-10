@@ -190,7 +190,8 @@ Customize or disable them via `presets` in
 
 | Version bundle | Default | valkey |
 |---|---|---|
-| `9.0` | ✅ | `9.0.0` |
+| `9.1` | | `9.1.2` |
+| `9.0` | ✅ | `9.0.6` |
 | `8.1` | | `8.1.1` |
 
 Source of truth: [definition/versions.yaml](definition/versions.yaml).

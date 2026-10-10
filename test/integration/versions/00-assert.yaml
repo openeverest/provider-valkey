@@ -1,0 +1,7 @@
+# The 9.0 bundle runs the latest 9.0 patch release.
+apiVersion: valkey.io/v1alpha1
+kind: ValkeyCluster
+metadata:
+  name: test-valkey-versions
+spec:
+  image: valkey/valkey:9.0.6
