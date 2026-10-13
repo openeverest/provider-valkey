@@ -175,6 +175,53 @@ spec:
                 required: true
           description: Provide the basic information for your new database.
           label: Basic Information
+        monitoring:
+          components:
+            prometheus:
+              components:
+                exporterResources:
+                  components:
+                    cpu:
+                      fieldParams:
+                        badge: m
+                        badgeToApi: true
+                        defaultValue: 100
+                        label: Exporter CPU
+                        step: 50
+                      path: spec.components.monitoring.resources.limits.cpu
+                      uiType: number
+                      validation:
+                        int: true
+                        min: 10
+                        required: true
+                    memory:
+                      fieldParams:
+                        badge: Mi
+                        badgeToApi: true
+                        defaultValue: 128
+                        label: Exporter memory
+                        step: 32
+                      path: spec.components.monitoring.resources.limits.memory
+                      uiType: number
+                      validation:
+                        int: true
+                        min: 32
+                        required: true
+                  componentsOrder:
+                    - cpu
+                    - memory
+                  groupType: line
+                  uiType: group
+              componentsOrder:
+                - exporterResources
+              description: Adds a metrics exporter sidecar and creates a PodMonitor resource for Prometheus to scrape.
+              groupType: toggleable
+              label: Prometheus
+              uiType: group
+          componentsOrder:
+            - prometheus
+          description: Collect database metrics with Prometheus.
+          label: Monitoring
         resources:
           components:
             numberOfReplicas:
@@ -262,6 +309,7 @@ spec:
         - basicInfo
         - resources
         - advanced
+        - monitoring
     replication:
       sections:
         advanced:
@@ -340,6 +388,53 @@ spec:
                 required: true
           description: Provide the basic information for your new database.
           label: Basic Information
+        monitoring:
+          components:
+            prometheus:
+              components:
+                exporterResources:
+                  components:
+                    cpu:
+                      fieldParams:
+                        badge: m
+                        badgeToApi: true
+                        defaultValue: 100
+                        label: Exporter CPU
+                        step: 50
+                      path: spec.components.monitoring.resources.limits.cpu
+                      uiType: number
+                      validation:
+                        int: true
+                        min: 10
+                        required: true
+                    memory:
+                      fieldParams:
+                        badge: Mi
+                        badgeToApi: true
+                        defaultValue: 128
+                        label: Exporter memory
+                        step: 32
+                      path: spec.components.monitoring.resources.limits.memory
+                      uiType: number
+                      validation:
+                        int: true
+                        min: 32
+                        required: true
+                  componentsOrder:
+                    - cpu
+                    - memory
+                  groupType: line
+                  uiType: group
+              componentsOrder:
+                - exporterResources
+              description: Adds a metrics exporter sidecar and creates a PodMonitor resource for Prometheus to scrape.
+              groupType: toggleable
+              label: Prometheus
+              uiType: group
+          componentsOrder:
+            - prometheus
+          description: Collect database metrics with Prometheus.
+          label: Monitoring
         resources:
           components:
             numberOfReplicas:
@@ -411,6 +506,7 @@ spec:
         - basicInfo
         - resources
         - advanced
+        - monitoring
   versions:
     - components:
         engine: 9.1.2
