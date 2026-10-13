@@ -193,7 +193,56 @@ ui:
         - tls
         - clientAuth
         - certificateUser
+    monitoring:
+      label: Monitoring
+      description: Collect database metrics with Prometheus.
+      components:
+        prometheus:
+          uiType: group
+          groupType: toggleable
+          label: Prometheus
+          description: Adds a metrics exporter sidecar and creates a PodMonitor resource for Prometheus to scrape.
+          # Any value in the group adds the monitoring component.
+          components:
+            exporterResources:
+              uiType: group
+              groupType: line
+              components:
+                cpu:
+                  uiType: number
+                  path: spec.components.monitoring.resources.limits.cpu
+                  fieldParams:
+                    label: Exporter CPU
+                    defaultValue: 100
+                    step: 50
+                    badge: m
+                    badgeToApi: true
+                  validation:
+                    required: true
+                    int: true
+                    min: 10
+                memory:
+                  uiType: number
+                  path: spec.components.monitoring.resources.limits.memory
+                  fieldParams:
+                    label: Exporter memory
+                    defaultValue: 128
+                    step: 32
+                    badge: Mi
+                    badgeToApi: true
+                  validation:
+                    required: true
+                    int: true
+                    min: 32
+              componentsOrder:
+                - cpu
+                - memory
+          componentsOrder:
+            - exporterResources
+      componentsOrder:
+        - prometheus
   sectionsOrder:
     - basicInfo
     - resources
     - advanced
+    - monitoring
