@@ -109,3 +109,11 @@
     - valkeyclusters/status
   verbs:
     - get
+- apiGroups:
+    - valkey.io
+  resources:
+    - valkeynodes
+  verbs:
+    - get
+    - list
+    - watch

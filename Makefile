@@ -133,10 +133,12 @@ PROMETHEUS_OPERATOR_VERSION ?= v0.94.1
 install-test-crds: helm-deps ## Install the CRDs required by the integration tests.
 	kubectl apply -f https://raw.githubusercontent.com/openeverest/openeverest/$(OPENEVEREST_BRANCH)/config/crd/bases/core.openeverest.io_providers.yaml
 	kubectl apply -f https://raw.githubusercontent.com/openeverest/openeverest/$(OPENEVEREST_BRANCH)/config/crd/bases/core.openeverest.io_instances.yaml
-	# The ValkeyCluster CRD is bundled with the valkey-operator subchart. The
-	# integration tests simulate the operator by patching status, so the
-	# operator itself is not deployed.
-	tar -xzf $(CHART_DIR)/charts/valkey-operator-*.tgz -O valkey-operator/crds/valkey.io_valkeyclusters.yaml | kubectl apply -f -
+	# The ValkeyCluster and ValkeyNode CRDs are bundled with the valkey-operator
+	# subchart. The integration tests simulate the operator by patching status,
+	# so the operator itself is not deployed.
+	for crd in valkeyclusters valkeynodes; do \
+		tar -xzf $(CHART_DIR)/charts/valkey-operator-*.tgz -O valkey-operator/crds/valkey.io_$$crd.yaml | kubectl apply -f - || exit 1; \
+	done
 	# The provider creates PodMonitors when the Prometheus Operator CRD exists.
 	kubectl apply --server-side -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/$(PROMETHEUS_OPERATOR_VERSION)/example/prometheus-operator-crd/monitoring.coreos.com_podmonitors.yaml
 

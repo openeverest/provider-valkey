@@ -23,3 +23,20 @@ spec:
         name: test-valkey-replication-auth
         keys:
           - default
+---
+# Clients connect through the primary Service. No ValkeyNode reports a role
+# yet, so it selects the operator's initial primary.
+apiVersion: v1
+kind: Service
+metadata:
+  name: valkey-test-valkey-replication-primary
+spec:
+  type: ClusterIP
+  selector:
+    valkey.io/cluster: test-valkey-replication
+    valkey.io/shard-index: "0"
+    valkey.io/node-index: "0"
+  ports:
+    - name: valkey
+      port: 6379
+      targetPort: 6379

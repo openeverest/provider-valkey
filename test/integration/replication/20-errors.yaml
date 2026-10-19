@@ -1,6 +1,12 @@
-# The ValkeyCluster must be garbage collected after the Instance is deleted.
-# Referenced by the `error` step: if it still exists, the step fails.
+# The ValkeyCluster and the primary Service must be garbage collected after
+# the Instance is deleted. Referenced by the `error` step: if they still exist,
+# the step fails.
 apiVersion: valkey.io/v1alpha1
 kind: ValkeyCluster
 metadata:
   name: test-valkey-replication
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: valkey-test-valkey-replication-primary

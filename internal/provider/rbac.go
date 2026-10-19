@@ -19,6 +19,7 @@ package provider
 // +kubebuilder:rbac:groups=valkey.io,resources=valkeyclusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=valkey.io,resources=valkeyclusters/status,verbs=get
 // +kubebuilder:rbac:groups=valkey.io,resources=valkeyclusters/finalizers,verbs=update
+// +kubebuilder:rbac:groups=valkey.io,resources=valkeynodes,verbs=get;list;watch
 
 // Core resources used to read connection endpoints, pass through config, and
 // write the connection secret managed by the provider-runtime.

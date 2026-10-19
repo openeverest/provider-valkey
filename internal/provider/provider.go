@@ -35,6 +35,7 @@ func New(podMonitor PodMonitorConfig) *Provider {
 			},
 			WatchConfigs: []controller.WatchConfig{
 				controller.WatchOwned(&valkeyv1alpha1.ValkeyCluster{}),
+				controller.WatchExternal(&valkeyv1alpha1.ValkeyNode{}, valkeyNodeHandler, managedValkeyNode),
 			},
 		},
 	}
@@ -100,6 +101,10 @@ func (p *Provider) Sync(c *controller.Context) error {
 		Spec:       spec,
 	}
 	if err := c.Apply(vc); err != nil {
+		return err
+	}
+
+	if err := syncPrimaryService(c); err != nil {
 		return err
 	}
 
