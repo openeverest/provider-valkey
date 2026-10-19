@@ -133,6 +133,18 @@ ui:
             modes:
               edit:
                 disabled: true
+        volumeReclaimPolicy:
+          uiType: select
+          path: spec.components.engine.parameters.volumeReclaimPolicy
+          fieldParams:
+            label: Data volumes of removed nodes
+            helperText: Applies when the instance is deleted and when replicas are scaled in.
+            defaultValue: Delete
+            options:
+              - label: Delete
+                value: Delete
+              - label: Retain (delete them manually)
+                value: Retain
         tls:
           uiType: select
           path: spec.components.engine.parameters.tls.mode
@@ -173,6 +185,7 @@ ui:
                 value: cn
       componentsOrder:
         - storageClass
+        - volumeReclaimPolicy
         - tls
         - clientAuth
         - certificateUser

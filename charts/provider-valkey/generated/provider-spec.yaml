@@ -37,6 +37,8 @@ spec:
                 mode:
                   type: string
               type: object
+            volumeReclaimPolicy:
+              type: string
           type: object
       type: valkey
     monitoring:
@@ -149,8 +151,21 @@ spec:
                     value: disabled
               path: spec.components.engine.parameters.tls.mode
               uiType: select
+            volumeReclaimPolicy:
+              fieldParams:
+                defaultValue: Delete
+                helperText: Applies when the instance is deleted and when shards or replicas are scaled in.
+                label: Data volumes of removed nodes
+                options:
+                  - label: Delete
+                    value: Delete
+                  - label: Retain (delete them manually)
+                    value: Retain
+              path: spec.components.engine.parameters.volumeReclaimPolicy
+              uiType: select
           componentsOrder:
             - storageClass
+            - volumeReclaimPolicy
             - tls
             - clientAuth
             - certificateUser
@@ -362,8 +377,21 @@ spec:
                     value: disabled
               path: spec.components.engine.parameters.tls.mode
               uiType: select
+            volumeReclaimPolicy:
+              fieldParams:
+                defaultValue: Delete
+                helperText: Applies when the instance is deleted and when replicas are scaled in.
+                label: Data volumes of removed nodes
+                options:
+                  - label: Delete
+                    value: Delete
+                  - label: Retain (delete them manually)
+                    value: Retain
+              path: spec.components.engine.parameters.volumeReclaimPolicy
+              uiType: select
           componentsOrder:
             - storageClass
+            - volumeReclaimPolicy
             - tls
             - clientAuth
             - certificateUser

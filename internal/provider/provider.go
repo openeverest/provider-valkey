@@ -56,6 +56,9 @@ func (p *Provider) Validate(c *controller.Context) error {
 	if engine.Replicas != nil && *engine.Replicas < 0 {
 		return fmt.Errorf("engine replicas must not be negative")
 	}
+	if err := validateVolumeReclaimPolicy(c, engine); err != nil {
+		return err
+	}
 
 	// The cluster topology requires at least three shards.
 	if c.Instance().GetTopologyType() == common.TopologyCluster {

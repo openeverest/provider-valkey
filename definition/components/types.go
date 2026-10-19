@@ -23,6 +23,13 @@ type ValkeyEngineConfig struct {
 	// present.
 	// +optional
 	TLS *ValkeyTLSConfig `json:"tls,omitempty"`
+
+	// VolumeReclaimPolicy controls the data volumes of removed nodes, when the
+	// Instance is deleted or shards and replicas are scaled in. "Delete" (the
+	// default when unset) removes them; "Retain" keeps them for manual cleanup.
+	// +kubebuilder:validation:Enum=Delete;Retain
+	// +optional
+	VolumeReclaimPolicy string `json:"volumeReclaimPolicy,omitempty"`
 }
 
 // ValkeyTLSConfig configures in-transit encryption for the Valkey instance.
@@ -62,4 +69,7 @@ const (
 
 	TLSCertificateUserCN       = "cn"
 	TLSCertificateUserDisabled = "disabled"
+
+	VolumeReclaimPolicyDelete = "Delete"
+	VolumeReclaimPolicyRetain = "Retain"
 )

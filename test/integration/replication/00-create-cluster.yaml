@@ -19,5 +19,7 @@ spec:
           memory: 2Gi
       storage:
         size: 10Gi
+      parameters:
+        volumeReclaimPolicy: Retain
     monitoring:
       type: exporter

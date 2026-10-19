@@ -74,16 +74,19 @@ func buildClusterSpec(c *controller.Context) (valkeyv1alpha1.ValkeyClusterSpec, 
 
 	spec.Scheduling = buildScheduling(c.Name(), engine.SchedulingPolicy)
 
+	var engineCfg components.ValkeyEngineConfig
+	c.TryDecodeComponentParameters(engine, &engineCfg)
+
 	if engine.Storage != nil && !engine.Storage.Size.IsZero() {
 		spec.Persistence = &valkeyv1alpha1.PersistenceSpec{
 			Size:             engine.Storage.Size,
 			StorageClassName: engine.Storage.StorageClass,
+			ReclaimPolicy:    persistenceReclaimPolicy(engineCfg.VolumeReclaimPolicy),
 		}
 	}
 
 	// Pass through any custom Valkey configuration parameters.
-	var engineCfg components.ValkeyEngineConfig
-	if c.TryDecodeComponentParameters(engine, &engineCfg) && len(engineCfg.Config) > 0 {
+	if len(engineCfg.Config) > 0 {
 		spec.Config = engineCfg.Config
 	}
 
@@ -161,6 +164,27 @@ func buildExporterSpec(c *controller.Context) (valkeyv1alpha1.ExporterSpec, erro
 	}
 
 	return exporter, nil
+}
+
+// persistenceReclaimPolicy defaults to Delete: the operator's own default,
+// Retain, leaves billed volumes behind after every Instance deletion.
+func persistenceReclaimPolicy(policy string) valkeyv1alpha1.PersistenceReclaimPolicy {
+	if policy == components.VolumeReclaimPolicyRetain {
+		return valkeyv1alpha1.PersistenceReclaimPolicyRetain
+	}
+	return valkeyv1alpha1.PersistenceReclaimPolicyDelete
+}
+
+// validateVolumeReclaimPolicy rejects values the operator would not accept.
+func validateVolumeReclaimPolicy(c *controller.Context, engine corev1alpha1.ComponentSpec) error {
+	var cfg components.ValkeyEngineConfig
+	c.TryDecodeComponentParameters(engine, &cfg)
+	switch cfg.VolumeReclaimPolicy {
+	case "", components.VolumeReclaimPolicyDelete, components.VolumeReclaimPolicyRetain:
+		return nil
+	}
+	return fmt.Errorf("engine.parameters.volumeReclaimPolicy must be %s or %s, got %q",
+		components.VolumeReclaimPolicyDelete, components.VolumeReclaimPolicyRetain, cfg.VolumeReclaimPolicy)
 }
 
 // resolveEngineImage resolves the Valkey server image from the user override,
