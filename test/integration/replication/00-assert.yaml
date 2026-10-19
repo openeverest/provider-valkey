@@ -8,6 +8,9 @@ spec:
   image: valkey/valkey:9.0.6
   shards: 1
   replicas: 1
+  persistence:
+    size: 10Gi
+    reclaimPolicy: Retain
   exporter:
     enabled: true
   scheduling:

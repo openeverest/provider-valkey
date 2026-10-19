@@ -69,7 +69,7 @@ Stateful workloads additionally report:
 
 | Capability | Status | Notes |
 |---|---|---|
-| Persistent storage | ✅ | Per-component `storage.size`; PVCs are deleted with the Instance and on shard scale-in |
+| Persistent storage | ✅ | Per-component `storage.size`; volumes are deleted with the Instance and on scale-in unless `parameters.volumeReclaimPolicy: Retain` |
 | Storage expansion | ❌ | |
 | Backups (on demand) | ❌ | |
 | Backups (scheduled) | ❌ | |
@@ -238,6 +238,10 @@ Technology-specific knobs:
   `core_openeverest_io_component`, `valkey_io_shard_index` and `valkey_io_node_index`. Chart
   values `podMonitor.enabled` and `podMonitor.labels` turn it off or label it for the
   Prometheus `podMonitorSelector` (for kube-prometheus-stack: `release: <release-name>`).
+- **Volume cleanup** — `components.engine.parameters.volumeReclaimPolicy` is `Delete`
+  (default) or `Retain`. With `Delete`, the data volumes are removed when the Instance is
+  deleted and when shards or replicas are scaled in. With `Retain`, they stay and you delete
+  the `valkey-<instance>-*-data` PVCs yourself. It can be changed on a running instance.
 - **Cluster shards** — set `topology.parameters.numShards` (cluster topology only, minimum 3).
 
 ## Development

@@ -15,6 +15,7 @@
 package provider
 
 import (
+	"strings"
 	"testing"
 
 	corev1alpha1 "github.com/openeverest/openeverest/v2/api/core/v1alpha1"
@@ -26,24 +27,62 @@ import (
 	"github.com/openeverest/provider-valkey/internal/common"
 )
 
-func TestBuildClusterSpecPersistence(t *testing.T) {
-	in := newTestInstance("", false)
+func newStorageInstance(engineParameters string) *corev1alpha1.Instance {
+	in := newTestInstance(engineParameters, false)
 	engine := in.Spec.Components[common.ComponentEngine]
 	engine.Storage = &corev1alpha1.Storage{Size: resource.MustParse("10Gi"), StorageClass: ptr.To("fast")}
 	in.Spec.Components[common.ComponentEngine] = engine
-	c, _ := newTestContext(t, in, interceptor.Funcs{})
+	return in
+}
 
-	spec, err := buildClusterSpec(c)
-	if err != nil {
-		t.Fatal(err)
+func TestBuildClusterSpecPersistence(t *testing.T) {
+	tests := []struct {
+		name   string
+		params string
+		want   valkeyv1alpha1.PersistenceReclaimPolicy
+	}{
+		{name: "volumes are deleted by default", want: valkeyv1alpha1.PersistenceReclaimPolicyDelete},
+		{name: "Delete", params: `{"volumeReclaimPolicy":"Delete"}`, want: valkeyv1alpha1.PersistenceReclaimPolicyDelete},
+		{name: "Retain", params: `{"volumeReclaimPolicy":"Retain"}`, want: valkeyv1alpha1.PersistenceReclaimPolicyRetain},
 	}
-	want := valkeyv1alpha1.PersistenceSpec{
-		Size:             resource.MustParse("10Gi"),
-		StorageClassName: ptr.To("fast"),
-		ReclaimPolicy:    valkeyv1alpha1.PersistenceReclaimPolicyDelete,
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c, _ := newTestContext(t, newStorageInstance(tt.params), interceptor.Funcs{})
+			spec, err := buildClusterSpec(c)
+			if err != nil {
+				t.Fatal(err)
+			}
+			p := spec.Persistence
+			if p == nil || !p.Size.Equal(resource.MustParse("10Gi")) || p.StorageClassName == nil || *p.StorageClassName != "fast" {
+				t.Fatalf("persistence = %+v, want 10Gi on storage class fast", p)
+			}
+			if p.ReclaimPolicy != tt.want {
+				t.Fatalf("reclaimPolicy = %q, want %q", p.ReclaimPolicy, tt.want)
+			}
+		})
 	}
-	if spec.Persistence == nil || !spec.Persistence.Size.Equal(want.Size) ||
-		*spec.Persistence.StorageClassName != *want.StorageClassName || spec.Persistence.ReclaimPolicy != want.ReclaimPolicy {
-		t.Fatalf("persistence = %+v, want %+v", spec.Persistence, want)
+}
+
+func TestValidateVolumeReclaimPolicy(t *testing.T) {
+	tests := []struct {
+		params  string
+		wantErr string
+	}{
+		{params: ""},
+		{params: `{"volumeReclaimPolicy":"Delete"}`},
+		{params: `{"volumeReclaimPolicy":"Retain"}`},
+		{params: `{"volumeReclaimPolicy":"retain"}`, wantErr: "must be Delete or Retain"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.params, func(t *testing.T) {
+			c, _ := newTestContext(t, newStorageInstance(tt.params), interceptor.Funcs{})
+			err := (&Provider{}).Validate(c)
+			if tt.wantErr == "" && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if tt.wantErr != "" && (err == nil || !strings.Contains(err.Error(), tt.wantErr)) {
+				t.Fatalf("error = %v, want %q", err, tt.wantErr)
+			}
+		})
 	}
 }
