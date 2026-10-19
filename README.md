@@ -69,7 +69,7 @@ Stateful workloads additionally report:
 
 | Capability | Status | Notes |
 |---|---|---|
-| Persistent storage | ✅ | Per-component `storage.size` |
+| Persistent storage | ✅ | Per-component `storage.size`; PVCs are deleted with the Instance and on shard scale-in |
 | Storage expansion | ❌ | |
 | Backups (on demand) | ❌ | |
 | Backups (scheduled) | ❌ | |

@@ -78,6 +78,9 @@ func buildClusterSpec(c *controller.Context) (valkeyv1alpha1.ValkeyClusterSpec, 
 		spec.Persistence = &valkeyv1alpha1.PersistenceSpec{
 			Size:             engine.Storage.Size,
 			StorageClassName: engine.Storage.StorageClass,
+			// The operator retains PVCs by default, which would orphan volumes when
+			// the Instance is deleted or shards are scaled in.
+			ReclaimPolicy: valkeyv1alpha1.PersistenceReclaimPolicyDelete,
 		}
 	}
 
