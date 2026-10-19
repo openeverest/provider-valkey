@@ -38,7 +38,8 @@ const (
 	defaultClusterShards = 3
 
 	// valkeyPort is the default Valkey client port exposed by the operator.
-	valkeyPort = "6379"
+	valkeyPort             = "6379"
+	valkeyPortNumber int32 = 6379
 
 	// headlessServicePrefix mirrors the valkey-operator's headless Service
 	// naming (`valkey-<clusterName>`).
@@ -200,12 +201,16 @@ func resolveShards(c *controller.Context) (int32, error) {
 }
 
 // buildConnectionDetails returns the well-known connection details for the
-// cluster's headless Service. The default user is password-protected; the
-// credentials are read from the auth Secret and embedded in the connection
-// URI. When transport encryption is enabled the URI uses the rediss:// scheme
-// and the CA certificate is published so clients can verify the server.
+// Service clients connect to (see connectionHost). The default user is
+// password-protected; the credentials are read from the auth Secret and
+// embedded in the connection URI. When transport encryption is enabled the
+// URI uses the rediss:// scheme and the CA certificate is published so
+// clients can verify the server.
 func buildConnectionDetails(c *controller.Context) (controller.ConnectionDetails, error) {
-	host := fmt.Sprintf("%s%s.%s.svc.cluster.local", headlessServicePrefix, c.Name(), c.Namespace())
+	host, err := connectionHost(c)
+	if err != nil {
+		return controller.ConnectionDetails{}, err
+	}
 
 	password, err := readDefaultPassword(c)
 	if err != nil {

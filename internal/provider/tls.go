@@ -455,15 +455,34 @@ func (ca *certAuthority) issue(tmpl *x509.Certificate) (certPEM, keyPEM []byte, 
 }
 
 // serverCertTemplate covers the headless Service FQDN the operator verifies
-// peers against, and the per-pod names on that Service.
+// peers against, the per-pod names on that Service, and the primary Service
+// clients of the replication topology connect to.
 func serverCertTemplate(instance, namespace string) *x509.Certificate {
 	fqdn := fmt.Sprintf("%s%s.%s.svc.cluster.local", headlessServicePrefix, instance, namespace)
 	return &x509.Certificate{
 		Subject:     pkix.Name{CommonName: fqdn},
 		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
 		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
-		DNSNames:    []string{fqdn, "*." + fqdn, "localhost"},
+		DNSNames:    []string{fqdn, "*." + fqdn, primaryServiceFQDN(instance, namespace), "localhost"},
 	}
+}
+
+// serverCertCovers reports whether the instance's server certificate is valid
+// for host. Certificates issued before a name was added do not cover it.
+func serverCertCovers(c *controller.Context, host string) (bool, error) {
+	secret := &corev1.Secret{}
+	if err := c.Get(secret, tlsSecretName(c.Name())); err != nil {
+		return false, err
+	}
+	block, _ := pem.Decode(secret.Data[tlsSecretKeyCert])
+	if block == nil {
+		return false, fmt.Errorf("TLS secret %q has no PEM certificate", secret.Name)
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return false, err
+	}
+	return cert.VerifyHostname(host) == nil, nil
 }
 
 // clientCertTemplate names the ACL user in the Common Name, which Valkey maps

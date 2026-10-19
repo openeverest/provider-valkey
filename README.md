@@ -172,6 +172,14 @@ per-instance auth Secret.
 | `replication` | ✅ | Single shard: one primary with zero or more read replicas |
 | `cluster` | | Multiple shards (minimum 3), data partitioned across primaries |
 
+Both topologies run Valkey in cluster mode, so replicas answer writes with `MOVED`. Clients of
+the `replication` topology connect to the `valkey-<instance>-primary` Service, which the
+provider points at the current primary and re-points after a failover; any Redis client works
+against it. `cluster` clients connect to the headless `valkey-<instance>` Service and must be
+cluster-aware. TLS instances created before the primary Service existed keep the headless
+Service in their connection details, because their certificate does not cover the new name;
+regenerate their TLS material (see below) to switch.
+
 ## Presets
 
 The chart installs `InstancePreset` resources that pre-fill common instance shapes
