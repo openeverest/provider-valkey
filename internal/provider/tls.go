@@ -185,7 +185,7 @@ func validateTLS(c *controller.Context) error {
 }
 
 // validateClientAuthNotRelaxed rejects moving a running cluster off required
-// client certificates. valkey-operator v0.7.1 stops presenting its own client
+// client certificates. valkey-operator (as of v0.8.0) stops presenting its own client
 // certificate as soon as the spec no longer requires one, which locks it out
 // of the nodes that have not rolled yet and stalls the cluster.
 func validateClientAuthNotRelaxed(c *controller.Context) error {

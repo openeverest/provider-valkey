@@ -15,6 +15,11 @@ spec:
       spread:
         shard:
           mode: Required
+  podMetadata:
+    labels:
+      core.openeverest.io/provider: valkey
+      core.openeverest.io/instance: test-valkey-cluster
+      core.openeverest.io/component: engine
   networking:
     discovery:
       preferredEndpointType: Hostname

@@ -46,7 +46,7 @@ lifecycle work is delegated to the operator.
 
 | provider-valkey | OpenEverest | valkey-operator | Kubernetes |
 |---|---|---|---|
-| `main` | `main` (after `2.0.0-dev.3`) | `0.7.1` | `1.31` – `1.33` |
+| `main` | `main` (after `2.0.0-dev.3`) | `0.8.0` | `1.31` – `1.33` |
 | `0.1.x` | `>= 2.0.0` | `0.6.0` | `1.30` – `1.33` |
 
 ## Capabilities
@@ -116,6 +116,25 @@ tar -xzf provider-valkey/charts/valkey-operator-*.tgz -O valkey-operator/crds/ \
 Upgrading to valkey-operator `0.7.x` rolls every Valkey pod once, and `cluster-node-timeout`
 moves to the Valkey default of 15 seconds unless set via
 `components.engine.parameters.config`.
+
+Upgrading to valkey-operator `0.8.x` does not roll the pods, but the CRD step above is
+required: with the `0.7.x` ValkeyNode CRD the API server silently drops the new
+`podMetadata` and `serviceAccountName` fields. `0.8.x` also rejects every update to a
+`ValkeyCluster` whose name is too long for its StatefulSets (41 characters with single-digit
+shard and replica indexes), including the operator's status writes. The provider fails
+validation of such an `Instance` with the length its shards and replicas allow. List the
+affected instances before upgrading:
+
+```bash
+kubectl get valkeycluster -A -o json | jq -r '.items[] | select((.spec.workloadType // "StatefulSet") == "StatefulSet" and (.metadata.name | length) > 41) | "\(.metadata.namespace)/\(.metadata.name)"'
+```
+
+The provider labels the Valkey pods with the OpenEverest pod labels (`core.openeverest.io/instance`,
+`core.openeverest.io/component`, `core.openeverest.io/provider`) through the `ValkeyCluster`'s
+`podMetadata`, so the `Instance` status reports its pods. Upgrading from a provider version that
+did not set them rolls every Valkey pod once. With replicas, the operator fails over before it
+rolls a primary. **An instance with no replicas and no persistent storage loses its data on that
+roll**: add a replica or back the data up before upgrading.
 
 Uninstalling the chart does **not** delete running `Instance` resources or their data.
 
@@ -231,11 +250,12 @@ Technology-specific knobs:
   pods. Instances created before the CA key was kept cannot issue client certificates: delete
   their `<instance>-tls` Secret to regenerate the TLS material, then restart the Valkey pods.
   Tightening `clientAuth` to `required` on a running instance is supported; relaxing it from
-  `required` is rejected, because valkey-operator v0.7.1 stops presenting its client
+  `required` is rejected, because valkey-operator (as of v0.8.0) stops presenting its client
   certificate before the nodes stop requiring one and loses access to the cluster.
 - **Metrics** — with the `monitoring` component, the provider creates a `PodMonitor`
   (`<instance>-metrics`) when the Prometheus Operator CRDs are installed. Series carry
-  `core_openeverest_io_component`, `valkey_io_shard_index` and `valkey_io_node_index`. Chart
+  `core_openeverest_io_instance`, `core_openeverest_io_component`, `valkey_io_shard_index` and
+  `valkey_io_node_index`. Chart
   values `podMonitor.enabled` and `podMonitor.labels` turn it off or label it for the
   Prometheus `podMonitorSelector` (for kube-prometheus-stack: `release: <release-name>`).
 - **Cluster shards** — set `topology.parameters.numShards` (cluster topology only, minimum 3).

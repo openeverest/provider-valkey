@@ -12,12 +12,10 @@ spec:
     matchLabels:
       valkey.io/cluster: test-valkey-metrics
   podTargetLabels:
+    - core.openeverest.io/instance
+    - core.openeverest.io/component
     - valkey.io/shard-index
     - valkey.io/node-index
   podMetricsEndpoints:
     - port: metrics
       path: /metrics
-      relabelings:
-        - action: replace
-          targetLabel: core_openeverest_io_component
-          replacement: engine

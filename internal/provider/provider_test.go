@@ -16,6 +16,10 @@ package provider
 
 import (
 	"context"
+	"fmt"
+	"maps"
+	"slices"
+	"strings"
 	"testing"
 
 	commonv1alpha1 "github.com/openeverest/openeverest/v2/api/common/v1alpha1"
@@ -26,6 +30,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -118,4 +123,68 @@ func getSecret(t *testing.T, cl client.Client, name string) *corev1.Secret {
 		t.Fatalf("getting secret %q: %v", name, err)
 	}
 	return secret
+}
+
+func TestSyncLabelsEnginePods(t *testing.T) {
+	c, cl := newTestContext(t, newTestInstance("", true), interceptor.Funcs{})
+	if err := New(PodMonitorConfig{}).Sync(c); err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+
+	vc := &valkeyv1alpha1.ValkeyCluster{}
+	if err := cl.Get(context.Background(), client.ObjectKey{Namespace: testNamespace, Name: testInstance}, vc); err != nil {
+		t.Fatalf("getting ValkeyCluster: %v", err)
+	}
+	want := map[string]valkeyv1alpha1.LabelValue{
+		controller.ProviderLabel:  common.ProviderName,
+		controller.InstanceLabel:  testInstance,
+		controller.ComponentLabel: common.ComponentEngine,
+	}
+	if vc.Spec.PodMetadata == nil || !maps.Equal(vc.Spec.PodMetadata.Labels, want) {
+		t.Fatalf("podMetadata = %+v, want labels %v", vc.Spec.PodMetadata, want)
+	}
+
+	// The exporter is a sidecar of the engine pods, so only the engine is
+	// reported in the Instance status.
+	if got := c.LabelledComponents(); !slices.Equal(got, []string{common.ComponentEngine}) {
+		t.Fatalf("labelled components = %v, want [%s]", got, common.ComponentEngine)
+	}
+}
+
+func TestValidateClusterNameLength(t *testing.T) {
+	tests := []struct {
+		name     string
+		nameLen  int
+		topology string
+		shards   int
+		replicas *int32
+		wantErr  bool
+	}{
+		{name: "replication without replicas at the limit", nameLen: 41, topology: common.TopologyReplication},
+		{name: "replication without replicas over the limit", nameLen: 42, topology: common.TopologyReplication, wantErr: true},
+		{name: "replication with 9 replicas at the limit", nameLen: 41, topology: common.TopologyReplication, replicas: ptr.To[int32](9)},
+		{name: "a 10th replica takes a character", nameLen: 41, topology: common.TopologyReplication, replicas: ptr.To[int32](10), wantErr: true},
+		{name: "10 shards at the limit", nameLen: 41, topology: common.TopologyCluster, shards: 10, replicas: ptr.To[int32](1)},
+		{name: "11 shards take a character", nameLen: 41, topology: common.TopologyCluster, shards: 11, replicas: ptr.To[int32](1), wantErr: true},
+		{name: "11 shards at the limit", nameLen: 40, topology: common.TopologyCluster, shards: 11, replicas: ptr.To[int32](1)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			in := newTestInstance("", false)
+			in.Name = strings.Repeat("v", tt.nameLen)
+			in.Spec.Topology.Type = tt.topology
+			if tt.shards > 0 {
+				in.Spec.Topology.Parameters = &runtime.RawExtension{Raw: fmt.Appendf(nil, `{"numShards":%d}`, tt.shards)}
+			}
+			engine := in.Spec.Components[common.ComponentEngine]
+			engine.Replicas = tt.replicas
+			in.Spec.Components[common.ComponentEngine] = engine
+
+			c, _ := newTestContext(t, in, interceptor.Funcs{})
+			err := New(PodMonitorConfig{}).Validate(c)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
 }

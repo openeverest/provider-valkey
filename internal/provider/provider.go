@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/openeverest/openeverest/v2/provider-runtime/controller"
@@ -55,6 +56,9 @@ func (p *Provider) Validate(c *controller.Context) error {
 	}
 	if engine.Replicas != nil && *engine.Replicas < 0 {
 		return fmt.Errorf("engine replicas must not be negative")
+	}
+	if err := validateClusterName(c, ptr.Deref(engine.Replicas, 0)); err != nil {
+		return err
 	}
 
 	// The cluster topology requires at least three shards.
