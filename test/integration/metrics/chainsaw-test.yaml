@@ -1,0 +1,46 @@
+---
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: metrics
+spec:
+  description: |
+    Metrics scraping lifecycle: create an Instance whose monitoring component
+    enables both Prometheus and VictoriaMetrics next to a PodMonitor left by an
+    earlier provider version, verify the provider creates a PodMonitor and a
+    VMPodScrape and removes the legacy PodMonitor, then turn Prometheus off and
+    finally remove the monitoring component.
+  catch:
+    - script:
+        content: kubectl -n $NAMESPACE get instances.core.openeverest.io,valkeycluster,podmonitor,vmpodscrape -o yaml
+  steps:
+    - name: scrape-with-both
+      try:
+        - apply:
+            file: 00-legacy-podmonitor.yaml
+        - apply:
+            file: 00-create-instance.yaml
+        - assert:
+            file: 00-assert.yaml
+        - error:
+            file: 00-errors.yaml
+
+    - name: turn-prometheus-off
+      try:
+        - script:
+            content: |
+              kubectl -n $NAMESPACE patch instances.core.openeverest.io/test-valkey-metrics --type=merge \
+                -p '{"spec":{"components":{"monitoring":{"parameters":{"metrics":{"prometheus":{"enabled":false}}}}}}}'
+        - assert:
+            file: 10-assert.yaml
+        - error:
+            file: 10-errors.yaml
+
+    - name: remove-monitoring
+      try:
+        - script:
+            content: |
+              kubectl -n $NAMESPACE patch instances.core.openeverest.io/test-valkey-metrics --type=json \
+                -p '[{"op":"remove","path":"/spec/components/monitoring"}]'
+        - error:
+            file: 20-errors.yaml

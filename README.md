@@ -61,7 +61,7 @@ provider itself is covered under [Installation](#installation).
 | Vertical scaling (CPU / memory) | ✅ | Per-component `resources` |
 | Version upgrades | ✅ | Select a version bundle with `spec.version` |
 | Custom configuration | ✅ | Passthrough Valkey config via engine `parameters.config` |
-| Monitoring | ✅ | Optional Prometheus exporter sidecar, scraped through a `PodMonitor` |
+| Monitoring | ✅ | Optional metrics exporter sidecar, scraped by Prometheus (`PodMonitor`) and/or VictoriaMetrics (`VMPodScrape`) |
 | TLS | ✅ | Self-signed CA + server certificate, on by default |
 | Mutual TLS | ✅ | Optional or required client certificates; a client certificate is issued for the default user |
 
@@ -135,6 +135,13 @@ The provider labels the Valkey pods with the OpenEverest pod labels (`core.opene
 did not set them rolls every Valkey pod once. With replicas, the operator fails over before it
 rolls a primary. **An instance with no replicas and no persistent storage loses its data on that
 roll**: add a replica or back the data up before upgrading.
+
+The monitoring component no longer implies Prometheus scraping. Each monitoring system is
+switched on per instance (see [Metrics](#configuration)), and the scrape resources are named
+`<instance>-prometheus` and `<instance>-victoriametrics`. On upgrade the provider deletes the
+`<instance>-metrics` PodMonitor of earlier versions, so instances with the monitoring component
+stop being scraped until `metrics.prometheus.enabled` or `metrics.victoriaMetrics.enabled` is
+set; the exporter keeps running. The chart value `podMonitor.enabled` is gone.
 
 Uninstalling the chart does **not** delete running `Instance` resources or their data.
 
@@ -252,12 +259,33 @@ Technology-specific knobs:
   Tightening `clientAuth` to `required` on a running instance is supported; relaxing it from
   `required` is rejected, because valkey-operator (as of v0.8.0) stops presenting its client
   certificate before the nodes stop requiring one and loses access to the cluster.
-- **Metrics** — with the `monitoring` component, the provider creates a `PodMonitor`
-  (`<instance>-metrics`) when the Prometheus Operator CRDs are installed. Series carry
-  `core_openeverest_io_instance`, `core_openeverest_io_component`, `valkey_io_shard_index` and
-  `valkey_io_node_index`. Chart
-  values `podMonitor.enabled` and `podMonitor.labels` turn it off or label it for the
-  Prometheus `podMonitorSelector` (for kube-prometheus-stack: `release: <release-name>`).
+- **Metrics** — the `monitoring` component runs a metrics exporter sidecar next to every
+  Valkey server. Its parameters choose the monitoring systems that scrape it:
+
+  ```yaml
+  spec:
+    components:
+      monitoring:
+        type: exporter
+        parameters:
+          metrics:
+            prometheus:
+              enabled: true
+            victoriaMetrics:
+              enabled: false
+  ```
+
+  Prometheus gets a `PodMonitor` (`<instance>-prometheus`), VictoriaMetrics a `VMPodScrape`
+  (`<instance>-victoriametrics`). Both live next to the Instance and are removed with it or
+  when switched off. Series carry `core_openeverest_io_instance`, `core_openeverest_io_component`,
+  `valkey_io_shard_index` and `valkey_io_node_index`. Keep in mind:
+
+  - The matching operator must be installed; otherwise the Instance fails validation.
+  - The monitoring system must select the resource. Chart values `podMonitor.labels` and
+    `vmPodScrape.labels` label every `PodMonitor` / `VMPodScrape`, e.g. `release: <release-name>`
+    for the kube-prometheus-stack `podMonitorSelector`.
+  - The VictoriaMetrics Operator converts `PodMonitor`s into `VMPodScrape`s by default, so with
+    both systems enabled VictoriaMetrics scrapes the instance twice.
 - **Cluster shards** — set `topology.parameters.numShards` (cluster topology only, minimum 3).
 
 ## Development

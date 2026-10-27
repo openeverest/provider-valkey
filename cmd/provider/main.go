@@ -16,12 +16,12 @@ func main() {
 	l := ctrl.Log.WithName("setup")
 	ctx := ctrl.SetupSignalHandler()
 
-	podMonitor, err := provider.PodMonitorConfigFromEnv()
+	scrapes, err := provider.ScrapeConfigFromEnv()
 	if err != nil {
-		l.Error(err, "invalid PodMonitor configuration")
+		l.Error(err, "invalid scrape configuration")
 		os.Exit(1)
 	}
-	p := provider.New(podMonitor)
+	p := provider.New(scrapes)
 
 	r, err := reconciler.New(ctx, p,
 		// Enable HTTP server for validation and schema endpoints.

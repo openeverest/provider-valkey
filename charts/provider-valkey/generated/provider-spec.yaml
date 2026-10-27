@@ -40,6 +40,23 @@ spec:
           type: object
       type: valkey
     monitoring:
+      parametersSchema:
+        openAPIV3Schema:
+          properties:
+            metrics:
+              properties:
+                prometheus:
+                  properties:
+                    enabled:
+                      type: boolean
+                  type: object
+                victoriaMetrics:
+                  properties:
+                    enabled:
+                      type: boolean
+                  type: object
+              type: object
+          type: object
       type: exporter
   defaultVersion: "9.0"
   release:
@@ -177,7 +194,7 @@ spec:
           label: Basic Information
         monitoring:
           components:
-            prometheus:
+            metrics:
               components:
                 exporterResources:
                   components:
@@ -212,15 +229,29 @@ spec:
                     - memory
                   groupType: line
                   uiType: group
+                prometheus:
+                  fieldParams:
+                    helperText: Create a PodMonitor so the Prometheus Operator scrapes the metrics.
+                    label: Prometheus
+                  path: spec.components.monitoring.parameters.metrics.prometheus.enabled
+                  uiType: toggle
+                victoriaMetrics:
+                  fieldParams:
+                    helperText: Create a VMPodScrape so the VictoriaMetrics Operator scrapes the metrics.
+                    label: VictoriaMetrics
+                  path: spec.components.monitoring.parameters.metrics.victoriaMetrics.enabled
+                  uiType: toggle
               componentsOrder:
                 - exporterResources
-              description: Adds a metrics exporter sidecar and creates a PodMonitor resource for Prometheus to scrape.
+                - prometheus
+                - victoriaMetrics
+              description: Run a metrics exporter next to every Valkey server to expose metrics in the Prometheus format.
               groupType: toggleable
-              label: Prometheus
+              label: Expose metrics
               uiType: group
           componentsOrder:
-            - prometheus
-          description: Collect database metrics with Prometheus.
+            - metrics
+          description: Collect database metrics with Prometheus or VictoriaMetrics.
           label: Monitoring
         resources:
           components:
@@ -390,7 +421,7 @@ spec:
           label: Basic Information
         monitoring:
           components:
-            prometheus:
+            metrics:
               components:
                 exporterResources:
                   components:
@@ -425,15 +456,29 @@ spec:
                     - memory
                   groupType: line
                   uiType: group
+                prometheus:
+                  fieldParams:
+                    helperText: Create a PodMonitor so the Prometheus Operator scrapes the metrics.
+                    label: Prometheus
+                  path: spec.components.monitoring.parameters.metrics.prometheus.enabled
+                  uiType: toggle
+                victoriaMetrics:
+                  fieldParams:
+                    helperText: Create a VMPodScrape so the VictoriaMetrics Operator scrapes the metrics.
+                    label: VictoriaMetrics
+                  path: spec.components.monitoring.parameters.metrics.victoriaMetrics.enabled
+                  uiType: toggle
               componentsOrder:
                 - exporterResources
-              description: Adds a metrics exporter sidecar and creates a PodMonitor resource for Prometheus to scrape.
+                - prometheus
+                - victoriaMetrics
+              description: Run a metrics exporter next to every Valkey server to expose metrics in the Prometheus format.
               groupType: toggleable
-              label: Prometheus
+              label: Expose metrics
               uiType: group
           componentsOrder:
-            - prometheus
-          description: Collect database metrics with Prometheus.
+            - metrics
+          description: Collect database metrics with Prometheus or VictoriaMetrics.
           label: Monitoring
         resources:
           components:

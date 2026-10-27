@@ -14,6 +14,8 @@ components:
   engine:
     type: valkey
     parametersSchema: ValkeyEngineConfig
-  # monitoring enables the Prometheus metrics exporter sidecar on each pod.
+  # monitoring runs the metrics exporter sidecar on each pod; its parameters
+  # choose the monitoring systems that scrape it.
   monitoring:
     type: exporter
+    parametersSchema: MonitoringParameters
