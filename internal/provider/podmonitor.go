@@ -43,10 +43,6 @@ const (
 	shardIndexPodLabel = "valkey.io/shard-index"
 	nodeIndexPodLabel  = "valkey.io/node-index"
 
-	// componentMetricLabel is controller.ComponentLabel as a Prometheus label.
-	// The operator cannot label the pods with it, so the scrape sets it.
-	componentMetricLabel = "core_openeverest_io_component"
-
 	podMonitorEnabledEnv = "POD_MONITOR_ENABLED"
 	podMonitorLabelsEnv  = "POD_MONITOR_LABELS"
 )
@@ -110,6 +106,8 @@ func syncPodMonitor(c *controller.Context, cfg PodMonitorConfig) error {
 
 // buildPodMonitor builds the PodMonitor for the instance. The configured
 // labels never override the managed ones that identify the owning Instance.
+// The pods are selected by the operator's own label, which they carry before
+// they roll to pick up the OpenEverest pod labels.
 func buildPodMonitor(c *controller.Context, extraLabels map[string]string) *monitoringv1.PodMonitor {
 	objectMeta := c.ObjectMeta(podMonitorName(c.Name()))
 	labels := maps.Clone(extraLabels)
@@ -122,16 +120,14 @@ func buildPodMonitor(c *controller.Context, extraLabels map[string]string) *moni
 	return &monitoringv1.PodMonitor{
 		ObjectMeta: objectMeta,
 		Spec: monitoringv1.PodMonitorSpec{
-			Selector:        metav1.LabelSelector{MatchLabels: map[string]string{clusterPodLabel: c.Name()}},
-			PodTargetLabels: []string{shardIndexPodLabel, nodeIndexPodLabel},
+			Selector: metav1.LabelSelector{MatchLabels: map[string]string{clusterPodLabel: c.Name()}},
+			PodTargetLabels: []string{
+				controller.InstanceLabel, controller.ComponentLabel,
+				shardIndexPodLabel, nodeIndexPodLabel,
+			},
 			PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{{
 				Port: ptr.To(exporterPortName),
 				Path: exporterMetricsPath,
-				RelabelConfigs: []monitoringv1.RelabelConfig{{
-					Action:      "replace",
-					TargetLabel: componentMetricLabel,
-					Replacement: ptr.To(common.ComponentEngine),
-				}},
 			}},
 		},
 	}

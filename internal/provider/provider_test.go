@@ -16,6 +16,8 @@ package provider
 
 import (
 	"context"
+	"maps"
+	"slices"
 	"testing"
 
 	commonv1alpha1 "github.com/openeverest/openeverest/v2/api/common/v1alpha1"
@@ -118,4 +120,30 @@ func getSecret(t *testing.T, cl client.Client, name string) *corev1.Secret {
 		t.Fatalf("getting secret %q: %v", name, err)
 	}
 	return secret
+}
+
+func TestSyncLabelsEnginePods(t *testing.T) {
+	c, cl := newTestContext(t, newTestInstance("", true), interceptor.Funcs{})
+	if err := New(PodMonitorConfig{}).Sync(c); err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+
+	vc := &valkeyv1alpha1.ValkeyCluster{}
+	if err := cl.Get(context.Background(), client.ObjectKey{Namespace: testNamespace, Name: testInstance}, vc); err != nil {
+		t.Fatalf("getting ValkeyCluster: %v", err)
+	}
+	want := map[string]valkeyv1alpha1.LabelValue{
+		controller.ProviderLabel:  common.ProviderName,
+		controller.InstanceLabel:  testInstance,
+		controller.ComponentLabel: common.ComponentEngine,
+	}
+	if vc.Spec.PodMetadata == nil || !maps.Equal(vc.Spec.PodMetadata.Labels, want) {
+		t.Fatalf("podMetadata = %+v, want labels %v", vc.Spec.PodMetadata, want)
+	}
+
+	// The exporter is a sidecar of the engine pods, so only the engine is
+	// reported in the Instance status.
+	if got := c.LabelledComponents(); !slices.Equal(got, []string{common.ComponentEngine}) {
+		t.Fatalf("labelled components = %v, want [%s]", got, common.ComponentEngine)
+	}
 }

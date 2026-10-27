@@ -16,8 +16,10 @@ package provider
 
 import (
 	"context"
+	"slices"
 	"testing"
 
+	"github.com/openeverest/openeverest/v2/provider-runtime/controller"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -99,6 +101,10 @@ func TestSyncPodMonitor(t *testing.T) {
 	}
 	if got := pm.Spec.Selector.MatchLabels[clusterPodLabel]; got != testInstance {
 		t.Errorf("selector %s = %q, want %q", clusterPodLabel, got, testInstance)
+	}
+	wantTargetLabels := []string{controller.InstanceLabel, controller.ComponentLabel, shardIndexPodLabel, nodeIndexPodLabel}
+	if !slices.Equal(pm.Spec.PodTargetLabels, wantTargetLabels) {
+		t.Errorf("podTargetLabels = %v, want %v", pm.Spec.PodTargetLabels, wantTargetLabels)
 	}
 	if len(pm.Spec.PodMetricsEndpoints) != 1 || *pm.Spec.PodMetricsEndpoints[0].Port != exporterPortName {
 		t.Errorf("endpoints = %+v, want the %q port", pm.Spec.PodMetricsEndpoints, exporterPortName)

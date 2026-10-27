@@ -128,6 +128,13 @@ instances before upgrading:
 kubectl get valkeycluster -A -o json | jq -r '.items[] | select((.spec.workloadType // "StatefulSet") == "StatefulSet" and (.metadata.name | length) > 41) | "\(.metadata.namespace)/\(.metadata.name)"'
 ```
 
+The provider labels the Valkey pods with the OpenEverest pod labels (`core.openeverest.io/instance`,
+`core.openeverest.io/component`, `core.openeverest.io/provider`) through the `ValkeyCluster`'s
+`podMetadata`, so the `Instance` status reports its pods. Upgrading from a provider version that
+did not set them rolls every Valkey pod once. With replicas, the operator fails over before it
+rolls a primary. **An instance with no replicas and no persistent storage loses its data on that
+roll**: add a replica or back the data up before upgrading.
+
 Uninstalling the chart does **not** delete running `Instance` resources or their data.
 
 ## Usage
@@ -246,7 +253,8 @@ Technology-specific knobs:
   certificate before the nodes stop requiring one and loses access to the cluster.
 - **Metrics** — with the `monitoring` component, the provider creates a `PodMonitor`
   (`<instance>-metrics`) when the Prometheus Operator CRDs are installed. Series carry
-  `core_openeverest_io_component`, `valkey_io_shard_index` and `valkey_io_node_index`. Chart
+  `core_openeverest_io_instance`, `core_openeverest_io_component`, `valkey_io_shard_index` and
+  `valkey_io_node_index`. Chart
   values `podMonitor.enabled` and `podMonitor.labels` turn it off or label it for the
   Prometheus `podMonitorSelector` (for kube-prometheus-stack: `release: <release-name>`).
 - **Cluster shards** — set `topology.parameters.numShards` (cluster topology only, minimum 3).

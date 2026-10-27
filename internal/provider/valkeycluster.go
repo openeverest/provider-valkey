@@ -73,6 +73,7 @@ func buildClusterSpec(c *controller.Context) (valkeyv1alpha1.ValkeyClusterSpec, 
 	}
 
 	spec.Scheduling = buildScheduling(c.Name(), engine.SchedulingPolicy)
+	spec.PodMetadata = buildPodMetadata(c)
 
 	if engine.Storage != nil && !engine.Storage.Size.IsZero() {
 		spec.Persistence = &valkeyv1alpha1.PersistenceSpec{
@@ -129,6 +130,18 @@ func buildClusterSpec(c *controller.Context) (valkeyv1alpha1.ValkeyClusterSpec, 
 	}
 
 	return spec, nil
+}
+
+// buildPodMetadata labels the Valkey pods with the engine's OpenEverest pod
+// labels, through which the runtime reports them in the Instance status. The
+// metrics exporter runs as a sidecar, so the monitoring component has no pods.
+func buildPodMetadata(c *controller.Context) *valkeyv1alpha1.EmbeddedObjectMetadata {
+	podLabels := c.PodLabels(common.ComponentEngine)
+	labels := make(map[string]valkeyv1alpha1.LabelValue, len(podLabels))
+	for key, value := range podLabels {
+		labels[key] = valkeyv1alpha1.LabelValue(value)
+	}
+	return &valkeyv1alpha1.EmbeddedObjectMetadata{Labels: labels}
 }
 
 // buildExporterSpec configures the metrics exporter based on the presence of
