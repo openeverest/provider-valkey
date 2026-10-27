@@ -1,0 +1,49 @@
+# The provider must run the exporter and create a scrape resource for each
+# monitoring system, labelled so that plugin-metrics can find them.
+apiVersion: valkey.io/v1alpha1
+kind: ValkeyCluster
+metadata:
+  name: test-valkey-metrics
+spec:
+  exporter:
+    enabled: true
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: test-valkey-metrics-prometheus
+  labels:
+    app.kubernetes.io/managed-by: everest
+    app.kubernetes.io/instance: test-valkey-metrics
+spec:
+  selector:
+    matchLabels:
+      valkey.io/cluster: test-valkey-metrics
+  podTargetLabels:
+    - core.openeverest.io/instance
+    - core.openeverest.io/component
+    - valkey.io/shard-index
+    - valkey.io/node-index
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: test-valkey-metrics-victoriametrics
+  labels:
+    app.kubernetes.io/managed-by: everest
+    app.kubernetes.io/instance: test-valkey-metrics
+spec:
+  selector:
+    matchLabels:
+      valkey.io/cluster: test-valkey-metrics
+  podTargetLabels:
+    - core.openeverest.io/instance
+    - core.openeverest.io/component
+    - valkey.io/shard-index
+    - valkey.io/node-index
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics

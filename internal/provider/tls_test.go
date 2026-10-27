@@ -231,7 +231,7 @@ func TestValidateTLS(t *testing.T) {
 func TestSyncIssuesClientCertificate(t *testing.T) {
 	in := newTestInstance(`{"tls":{"clientAuth":"required","certificateUser":"cn"}}`, false)
 	c, cl := newTestContext(t, in, interceptor.Funcs{})
-	p := New(PodMonitorConfig{Enabled: true})
+	p := New(ScrapeConfig{})
 
 	if err := p.Sync(c); err != nil {
 		t.Fatalf("Sync: %v", err)
@@ -278,7 +278,7 @@ func TestConnectionDetailsClientCertificate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c, _ := newTestContext(t, newTestInstance(tt.parameters, false), interceptor.Funcs{})
-			if err := New(PodMonitorConfig{}).Sync(c); err != nil {
+			if err := New(ScrapeConfig{}).Sync(c); err != nil {
 				t.Fatalf("Sync: %v", err)
 			}
 

@@ -63,3 +63,34 @@ const (
 	TLSCertificateUserCN       = "cn"
 	TLSCertificateUserDisabled = "disabled"
 )
+
+// MonitoringParameters holds the configuration of the monitoring component.
+// The component runs the metrics exporter sidecar next to every Valkey
+// server; the parameters choose which monitoring systems scrape it.
+type MonitoringParameters struct {
+	// Metrics configures which monitoring systems scrape the exporter.
+	// If not specified, the exporter runs but nothing is created to scrape it.
+	// +optional
+	Metrics *MetricsParameters `json:"metrics,omitempty"`
+}
+
+// MetricsParameters configures which monitoring systems scrape the exposed
+// metrics.
+type MetricsParameters struct {
+	// Prometheus configures scraping by the Prometheus Operator.
+	// +optional
+	Prometheus *ScrapeParameters `json:"prometheus,omitempty"`
+
+	// VictoriaMetrics configures scraping by the VictoriaMetrics Operator.
+	// +optional
+	VictoriaMetrics *ScrapeParameters `json:"victoriaMetrics,omitempty"`
+}
+
+// ScrapeParameters configures scraping of the exposed metrics by one
+// monitoring system.
+type ScrapeParameters struct {
+	// Enabled creates the monitoring system's scrape resource for the
+	// instance: a PodMonitor for Prometheus, a VMPodScrape for VictoriaMetrics.
+	// +optional
+	Enabled bool `json:"enabled,omitempty"`
+}

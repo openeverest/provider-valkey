@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	vmv1beta1 "github.com/openeverest/provider-valkey/internal/apis/victoriametrics/v1beta1"
 	"github.com/openeverest/provider-valkey/internal/common"
 )
 
@@ -92,6 +93,7 @@ func newTestScheme(t *testing.T) *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	for _, add := range []func(*runtime.Scheme) error{
 		corev1.AddToScheme, corev1alpha1.AddToScheme, valkeyv1alpha1.AddToScheme, monitoringv1.AddToScheme,
+		vmv1beta1.AddToScheme,
 	} {
 		if err := add(scheme); err != nil {
 			t.Fatal(err)
@@ -127,7 +129,7 @@ func getSecret(t *testing.T, cl client.Client, name string) *corev1.Secret {
 
 func TestSyncLabelsEnginePods(t *testing.T) {
 	c, cl := newTestContext(t, newTestInstance("", true), interceptor.Funcs{})
-	if err := New(PodMonitorConfig{}).Sync(c); err != nil {
+	if err := New(ScrapeConfig{}).Sync(c); err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
 
@@ -181,7 +183,7 @@ func TestValidateClusterNameLength(t *testing.T) {
 			in.Spec.Components[common.ComponentEngine] = engine
 
 			c, _ := newTestContext(t, in, interceptor.Funcs{})
-			err := New(PodMonitorConfig{}).Validate(c)
+			err := New(ScrapeConfig{}).Validate(c)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}

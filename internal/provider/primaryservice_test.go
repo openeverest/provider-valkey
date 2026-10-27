@@ -72,7 +72,7 @@ func TestPrimaryServiceFollowsPrimary(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c, cl := newTestContext(t, newTestInstance("", false), interceptor.Funcs{}, tt.nodes...)
-			if err := New(PodMonitorConfig{}).Sync(c); err != nil {
+			if err := New(ScrapeConfig{}).Sync(c); err != nil {
 				t.Fatalf("Sync: %v", err)
 			}
 			svc, ok := getService(t, cl, primaryServiceName(testInstance))
@@ -94,7 +94,7 @@ func TestClusterTopologyHasNoPrimaryService(t *testing.T) {
 	in := newTestInstance("", false)
 	in.Spec.Topology.Type = common.TopologyCluster
 	c, cl := newTestContext(t, in, interceptor.Funcs{})
-	if err := New(PodMonitorConfig{}).Sync(c); err != nil {
+	if err := New(ScrapeConfig{}).Sync(c); err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
 	if _, ok := getService(t, cl, primaryServiceName(testInstance)); ok {
@@ -115,7 +115,7 @@ func TestReplicationConnectionHost(t *testing.T) {
 
 	t.Run("TLS disabled", func(t *testing.T) {
 		c, _ := newTestContext(t, newTestInstance(`{"tls":{"mode":"disabled"}}`, false), interceptor.Funcs{})
-		if err := New(PodMonitorConfig{}).Sync(c); err != nil {
+		if err := New(ScrapeConfig{}).Sync(c); err != nil {
 			t.Fatalf("Sync: %v", err)
 		}
 		cd, err := buildConnectionDetails(c)
@@ -129,7 +129,7 @@ func TestReplicationConnectionHost(t *testing.T) {
 
 	t.Run("TLS certificate covers the primary Service", func(t *testing.T) {
 		c, _ := newTestContext(t, newTestInstance("", false), interceptor.Funcs{})
-		if err := New(PodMonitorConfig{}).Sync(c); err != nil {
+		if err := New(ScrapeConfig{}).Sync(c); err != nil {
 			t.Fatalf("Sync: %v", err)
 		}
 		cd, err := buildConnectionDetails(c)

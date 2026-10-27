@@ -1,0 +1,6 @@
+# Without the monitoring component nothing is scraped, so the VMPodScrape is
+# removed too.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: test-valkey-metrics-victoriametrics
