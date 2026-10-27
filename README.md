@@ -121,8 +121,9 @@ Upgrading to valkey-operator `0.8.x` does not roll the pods, but the CRD step ab
 required: with the `0.7.x` ValkeyNode CRD the API server silently drops the new
 `podMetadata` and `serviceAccountName` fields. `0.8.x` also rejects every update to a
 `ValkeyCluster` whose name is too long for its StatefulSets (41 characters with single-digit
-shard and replica indexes), including the operator's status writes. List the affected
-instances before upgrading:
+shard and replica indexes), including the operator's status writes. The provider fails
+validation of such an `Instance` with the length its shards and replicas allow. List the
+affected instances before upgrading:
 
 ```bash
 kubectl get valkeycluster -A -o json | jq -r '.items[] | select((.spec.workloadType // "StatefulSet") == "StatefulSet" and (.metadata.name | length) > 41) | "\(.metadata.namespace)/\(.metadata.name)"'

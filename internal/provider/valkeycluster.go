@@ -17,6 +17,7 @@ package provider
 import (
 	"fmt"
 	"net/url"
+	"strconv"
 
 	corev1alpha1 "github.com/openeverest/openeverest/v2/api/core/v1alpha1"
 	"github.com/openeverest/openeverest/v2/provider-runtime/controller"
@@ -201,6 +202,28 @@ func resolveEngineImage(c *controller.Context, engine corev1alpha1.ComponentSpec
 // resolveShards returns the number of shards for the Instance's topology.
 // The replication topology is always a single shard; the cluster topology
 // reads numShards from its topology config (defaulting to defaultClusterShards).
+// clusterNameBudget is how many characters valkey-operator allows, for a
+// StatefulSet cluster, for the name plus the highest shard index (shards-1)
+// and node index (replicas) together: the StatefulSet valkey-<name>-<shard>-<node>
+// must leave room for the controller-revision-hash in a 63-character pod label.
+const clusterNameBudget = 43
+
+// validateClusterName mirrors the valkey-operator admission rule on the
+// ValkeyCluster name, so that a name too long for the instance's StatefulSets
+// fails validation instead of every apply of the ValkeyCluster.
+func validateClusterName(c *controller.Context, replicas int32) error {
+	shards, err := resolveShards(c)
+	if err != nil {
+		return err
+	}
+	indexDigits := len(strconv.Itoa(int(shards-1))) + len(strconv.Itoa(int(replicas)))
+	if maxLen := clusterNameBudget - indexDigits; len(c.Name()) > maxLen {
+		return fmt.Errorf("the instance name %q is too long: with %d shard(s) and %d replica(s) per shard "+
+			"it must be at most %d characters", c.Name(), shards, replicas, maxLen)
+	}
+	return nil
+}
+
 func resolveShards(c *controller.Context) (int32, error) {
 	if c.Instance().GetTopologyType() != common.TopologyCluster {
 		return 1, nil
