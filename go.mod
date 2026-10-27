@@ -5,7 +5,7 @@ go 1.27.1
 require (
 	github.com/openeverest/openeverest/v2 v2.0.0-dev.4
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.94.1
-	github.com/valkey-io/valkey-operator v0.7.1
+	github.com/valkey-io/valkey-operator v0.8.0
 	k8s.io/api v0.37.1
 	k8s.io/apimachinery v0.37.1
 	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3
