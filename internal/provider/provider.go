@@ -4,12 +4,14 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/openeverest/openeverest/v2/provider-runtime/controller"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	valkeyv1alpha1 "github.com/valkey-io/valkey-operator/api/v1alpha1"
 
+	vmv1beta1 "github.com/openeverest/provider-valkey/internal/apis/victoriametrics/v1beta1"
 	"github.com/openeverest/provider-valkey/internal/common"
 )
 
@@ -20,18 +22,19 @@ var _ controller.ProviderInterface = (*Provider)(nil)
 type Provider struct {
 	controller.BaseProvider
 
-	podMonitor PodMonitorConfig
+	scrapes ScrapeConfig
 }
 
 // New creates a new Provider instance.
-func New(podMonitor PodMonitorConfig) *Provider {
+func New(scrapes ScrapeConfig) *Provider {
 	return &Provider{
-		podMonitor: podMonitor,
+		scrapes: scrapes,
 		BaseProvider: controller.BaseProvider{
 			ProviderName: common.ProviderName,
 			SchemeFuncs: []func(*runtime.Scheme) error{
 				valkeyv1alpha1.AddToScheme,
 				monitoringv1.AddToScheme,
+				vmv1beta1.AddToScheme,
 			},
 			WatchConfigs: []controller.WatchConfig{
 				controller.WatchOwned(&valkeyv1alpha1.ValkeyCluster{}),
@@ -56,6 +59,9 @@ func (p *Provider) Validate(c *controller.Context) error {
 	if engine.Replicas != nil && *engine.Replicas < 0 {
 		return fmt.Errorf("engine replicas must not be negative")
 	}
+	if err := validateClusterName(c, ptr.Deref(engine.Replicas, 0)); err != nil {
+		return err
+	}
 
 	// The cluster topology requires at least three shards.
 	if c.Instance().GetTopologyType() == common.TopologyCluster {
@@ -66,6 +72,10 @@ func (p *Provider) Validate(c *controller.Context) error {
 		if shards < minClusterShards {
 			return fmt.Errorf("the cluster topology requires at least %d shards, got %d", minClusterShards, shards)
 		}
+	}
+
+	if err := validateScrapes(c); err != nil {
+		return err
 	}
 
 	return validateTLS(c)
@@ -108,7 +118,7 @@ func (p *Provider) Sync(c *controller.Context) error {
 		return err
 	}
 
-	return syncPodMonitor(c, p.podMonitor)
+	return syncScrapes(c, p.scrapes)
 }
 
 // Status translates the ValkeyCluster status into the provider-runtime Status.

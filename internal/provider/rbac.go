@@ -26,5 +26,7 @@ package provider
 // +kubebuilder:rbac:groups="",resources=secrets;configmaps;services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
 
-// Prometheus Operator PodMonitor scraping the metrics exporter sidecars.
+// Prometheus Operator PodMonitor and VictoriaMetrics Operator VMPodScrape
+// scraping the metrics exporter sidecars.
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=podmonitors,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=operator.victoriametrics.com,resources=vmpodscrapes,verbs=get;list;watch;create;update;patch;delete
