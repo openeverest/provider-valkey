@@ -3,7 +3,7 @@ module github.com/openeverest/provider-valkey
 go 1.27.1
 
 require (
-	github.com/openeverest/openeverest/v2 v2.0.0-dev.2.0.20261027055245-0730d3d500c1
+	github.com/openeverest/openeverest/v2 v2.0.0-dev.4
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.94.1
 	github.com/valkey-io/valkey-operator v0.7.1
 	k8s.io/api v0.37.1
