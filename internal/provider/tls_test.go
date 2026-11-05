@@ -19,6 +19,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
+	"slices"
 	"testing"
 
 	valkeyv1alpha1 "github.com/valkey-io/valkey-operator/api/v1alpha1"
@@ -29,7 +30,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/openeverest/provider-valkey/definition/components"
-	"github.com/openeverest/provider-valkey/internal/common"
 )
 
 func TestCertAuthorityIssuesServerCertificate(t *testing.T) {
@@ -134,7 +134,7 @@ func TestBuildClientAuth(t *testing.T) {
 	}
 }
 
-func TestValidateTLS(t *testing.T) {
+func TestValidateTLSReferences(t *testing.T) {
 	legacyTLSSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: tlsSecretName(testInstance), Namespace: testNamespace}}
 	caSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: tlsCASecretName(testInstance), Namespace: testNamespace}}
 	clientSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: tlsClientSecretName(testInstance), Namespace: testNamespace}}
@@ -148,46 +148,24 @@ func TestValidateTLS(t *testing.T) {
 	tests := []struct {
 		name       string
 		parameters string
-		version    string
-		image      string
 		objs       []client.Object
-		wantErr    bool
+		want       []string
 	}{
 		{
-			name:       "optional client auth is accepted without TLS",
-			parameters: `{"tls":{"mode":"disabled","clientAuth":"optional"}}`,
-		},
-		{
-			name:       "required client auth needs TLS",
-			parameters: `{"tls":{"mode":"disabled","clientAuth":"required"}}`,
-			wantErr:    true,
-		},
-		{
-			name:       "certificate user is pointless with client auth disabled",
-			parameters: `{"tls":{"clientAuth":"disabled","certificateUser":"cn"}}`,
-			wantErr:    true,
-		},
-		{
-			name:       "certificate user on the default 9.0 bundle",
-			parameters: `{"tls":{"clientAuth":"required","certificateUser":"cn"}}`,
-		},
-		{
-			name:       "certificate user needs Valkey 9.0",
-			parameters: `{"tls":{"certificateUser":"cn"}}`,
-			version:    "8.1",
-			wantErr:    true,
-		},
-		{
-			name:       "certificate user on a custom image is left to the operator",
-			parameters: `{"tls":{"certificateUser":"cn"}}`,
-			version:    "8.1",
-			image:      "registry.example/valkey:custom",
+			name:       "required client auth on a new instance",
+			parameters: `{"tls":{"clientAuth":"required"}}`,
 		},
 		{
 			name:       "required client auth on an instance without a CA key",
 			parameters: `{"tls":{"clientAuth":"required"}}`,
 			objs:       []client.Object{legacyTLSSecret},
-			wantErr:    true,
+			want:       []string{"spec.components[engine].parameters.tls.clientAuth"},
+		},
+		{
+			name:       "certificate user on an instance without a CA key",
+			parameters: `{"tls":{"certificateUser":"cn"}}`,
+			objs:       []client.Object{legacyTLSSecret},
+			want:       []string{"spec.components[engine].parameters.tls.certificateUser"},
 		},
 		{
 			name:       "required client auth on an instance with a CA key",
@@ -208,21 +186,22 @@ func TestValidateTLS(t *testing.T) {
 			name:       "running cluster cannot stop requiring client certificates",
 			parameters: `{"tls":{"clientAuth":"optional"}}`,
 			objs:       []client.Object{requiredCluster},
-			wantErr:    true,
+			want:       []string{"spec.components[engine].parameters.tls.clientAuth"},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			in := newTestInstance(tt.parameters, false)
-			in.Spec.Version = tt.version
-			engine := in.Spec.Components[common.ComponentEngine]
-			engine.Image = tt.image
-			in.Spec.Components[common.ComponentEngine] = engine
-
-			c, _ := newTestContext(t, in, interceptor.Funcs{}, tt.objs...)
-			err := validateTLS(c)
-			if (err != nil) != tt.wantErr {
-				t.Fatalf("validateTLS() error = %v, wantErr %v", err, tt.wantErr)
+			c, _ := newTestContext(t, newTestInstance(tt.parameters, false), interceptor.Funcs{}, tt.objs...)
+			errs, err := validateTLSReferences(c)
+			if err != nil {
+				t.Fatalf("validateTLSReferences: %v", err)
+			}
+			var got []string
+			for _, e := range errs {
+				got = append(got, e.Field)
+			}
+			if !slices.Equal(got, tt.want) {
+				t.Fatalf("validateTLSReferences() = %v, want errors on %v", errs, tt.want)
 			}
 		})
 	}

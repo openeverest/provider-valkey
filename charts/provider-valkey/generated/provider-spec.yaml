@@ -23,18 +23,54 @@ spec:
     engine:
       parametersSchema:
         openAPIV3Schema:
+          description: ValkeyEngineConfig holds custom configuration for the Valkey engine component.
           properties:
             config:
               additionalProperties:
                 type: string
+              description: |-
+                Config holds additional Valkey configuration parameters that are passed
+                through verbatim to the underlying ValkeyCluster (for example
+                "maxmemory" or "maxmemory-policy"). Operator-managed keys such as port,
+                TLS, and ACL settings are ignored.
               type: object
             tls:
+              description: |-
+                TLS configures transport encryption for the Valkey instance. Transport
+                encryption is enabled by default; the provider generates a self-signed
+                certificate authority and server certificate when no external secret is
+                present.
               properties:
                 certificateUser:
+                  description: |-
+                    CertificateUser maps a client certificate to the ACL user named by its
+                    Common Name, so clients authenticate without a password. "cn" enables
+                    the mapping (the issued client certificate has CN=default and requires
+                    Valkey 9.0+); "disabled" (the default when unset) turns it off.
+                  enum:
+                    - cn
+                    - disabled
                   type: string
                 clientAuth:
+                  description: |-
+                    ClientAuth controls client certificate authentication. "optional" (the
+                    default when unset) accepts clients with or without a certificate,
+                    "required" enforces mutual TLS, and "disabled" ignores client
+                    certificates. The provider issues a client certificate signed by the
+                    instance CA and publishes it in the connection details.
+                  enum:
+                    - optional
+                    - required
+                    - disabled
                   type: string
                 mode:
+                  description: |-
+                    Mode controls transport encryption. "enabled" (the default when unset)
+                    provisions a self-signed CA and server certificate; "disabled" turns
+                    transport encryption off.
+                  enum:
+                    - enabled
+                    - disabled
                   type: string
               type: object
           type: object
@@ -42,17 +78,32 @@ spec:
     monitoring:
       parametersSchema:
         openAPIV3Schema:
+          description: |-
+            MonitoringParameters holds the configuration of the monitoring component.
+            The component runs the metrics exporter sidecar next to every Valkey
+            server; the parameters choose which monitoring systems scrape it.
           properties:
             metrics:
+              description: |-
+                Metrics configures which monitoring systems scrape the exporter.
+                If not specified, the exporter runs but nothing is created to scrape it.
               properties:
                 prometheus:
+                  description: Prometheus configures scraping by the Prometheus Operator.
                   properties:
                     enabled:
+                      description: |-
+                        Enabled creates the monitoring system's scrape resource for the
+                        instance: a PodMonitor for Prometheus, a VMPodScrape for VictoriaMetrics.
                       type: boolean
                   type: object
                 victoriaMetrics:
+                  description: VictoriaMetrics configures scraping by the VictoriaMetrics Operator.
                   properties:
                     enabled:
+                      description: |-
+                        Enabled creates the monitoring system's scrape resource for the
+                        instance: a PodMonitor for Prometheus, a VMPodScrape for VictoriaMetrics.
                       type: boolean
                   type: object
               type: object
@@ -86,9 +137,15 @@ spec:
                 resources: {}
       parametersSchema:
         openAPIV3Schema:
+          description: ClusterTopologyConfig defines configuration for the cluster topology.
           properties:
             numShards:
+              description: |-
+                NumShards is the number of shard groups in the Valkey cluster. Each shard
+                owns a subset of the 16384 hash slots. A Valkey cluster requires at least
+                three primaries, so the minimum is 3.
               format: int32
+              minimum: 3
               type: integer
           type: object
     replication:

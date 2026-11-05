@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -125,32 +126,37 @@ func scrapeEnabled(scrape *components.ScrapeParameters) bool {
 
 // validateScrapes rejects scraping by a monitoring system whose operator is
 // not installed, since its scrape resource could not be created.
-func validateScrapes(c *controller.Context) error {
+func validateScrapes(c *controller.Context) (field.ErrorList, error) {
 	enabled, err := enabledScrapes(c)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	path := componentsPath.Key(common.ComponentMonitoring).Child("parameters", "metrics")
 	checks := []struct {
 		enabled  bool
+		field    string
 		kind     schema.GroupKind
 		version  string
 		operator string
 	}{
-		{enabled.prometheus, podMonitorGroupKind, monitoringv1.Version, "Prometheus Operator"},
-		{enabled.victoriaMetrics, vmPodScrapeGroupKind, vmv1beta1.GroupVersion.Version, "VictoriaMetrics Operator"},
+		{enabled.prometheus, "prometheus", podMonitorGroupKind, monitoringv1.Version, "Prometheus Operator"},
+		{enabled.victoriaMetrics, "victoriaMetrics", vmPodScrapeGroupKind, vmv1beta1.GroupVersion.Version, "VictoriaMetrics Operator"},
 	}
+	var errs field.ErrorList
 	for _, check := range checks {
 		if !check.enabled {
 			continue
 		}
 		if _, err := c.Client().RESTMapper().RESTMapping(check.kind, check.version); err != nil {
-			if meta.IsNoMatchError(err) {
-				return fmt.Errorf("the %s is not installed: the cluster does not serve %s", check.operator, check.kind)
+			if !meta.IsNoMatchError(err) {
+				return nil, fmt.Errorf("looking up %s: %w", check.kind, err)
 			}
-			return fmt.Errorf("looking up %s: %w", check.kind, err)
+			errs = append(errs, field.Invalid(path.Child(check.field, "enabled"), true,
+				fmt.Sprintf("the %s is not installed: the cluster does not serve %s", check.operator, check.kind),
+			))
 		}
 	}
-	return nil
+	return errs, nil
 }
 
 // syncScrapes creates the scrape resource of every monitoring system the

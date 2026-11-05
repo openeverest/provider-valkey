@@ -235,8 +235,8 @@ Source of truth: [definition/versions.yaml](definition/versions.yaml).
 - **Chart values:** [charts/provider-valkey/values.yaml](charts/provider-valkey/values.yaml)
 - **Instance parameters:** per-component and per-topology `parameters` schemas, defined under
   [definition/](definition/) and published on the `Provider` resource
-  (`kubectl get provider valkey -o yaml`). The API server and the UI validate user input
-  against these schemas.
+  (`kubectl get provider valkey -o yaml`). The provider rejects an Instance that does not
+  match them, and the UI checks the form against them as you type.
 
 Technology-specific knobs:
 

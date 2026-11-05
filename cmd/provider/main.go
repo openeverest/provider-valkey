@@ -24,11 +24,8 @@ func main() {
 	p := provider.New(scrapes)
 
 	r, err := reconciler.New(ctx, p,
-		// Enable HTTP server for validation and schema endpoints.
-		reconciler.WithServer(reconciler.ServerConfig{
-			Port:           8082,
-			ValidationPath: "/validate",
-		}),
+		// Serve the health and readiness probes.
+		reconciler.WithServer(reconciler.ServerConfig{Port: 8082}),
 	)
 	if err != nil {
 		l.Error(err, "unable to create reconciler")
