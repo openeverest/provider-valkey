@@ -1,0 +1,16 @@
+# The fixed Instance reaches the operator with TLS and certificate logins.
+apiVersion: valkey.io/v1alpha1
+kind: ValkeyCluster
+metadata:
+  name: test-valkey-admission
+spec:
+  shards: 1
+  replicas: 1
+  networking:
+    tls:
+      certificates:
+        server:
+          secretName: test-valkey-admission-tls
+      clientAuth:
+        mode: Optional
+        certificateUser: CN

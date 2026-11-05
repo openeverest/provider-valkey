@@ -1,0 +1,5 @@
+# The rejected Instance must not be persisted.
+apiVersion: core.openeverest.io/v1alpha1
+kind: Instance
+metadata:
+  name: test-valkey-admission

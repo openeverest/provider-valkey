@@ -1,0 +1,5 @@
+# The ValkeyCluster must be garbage collected after the Instance is deleted.
+apiVersion: valkey.io/v1alpha1
+kind: ValkeyCluster
+metadata:
+  name: test-valkey-admission

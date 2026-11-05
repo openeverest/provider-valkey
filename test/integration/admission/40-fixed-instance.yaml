@@ -1,0 +1,24 @@
+# Turns transport encryption on, which fixes the Instance.
+apiVersion: core.openeverest.io/v1alpha1
+kind: Instance
+metadata:
+  name: test-valkey-admission
+spec:
+  providerRef:
+    name: valkey
+  topology:
+    type: replication
+  components:
+    engine:
+      type: valkey
+      replicas: 1
+      resources:
+        limits:
+          cpu: "2"
+          memory: 1Gi
+      storage:
+        size: 1Gi
+      parameters:
+        tls:
+          mode: enabled
+          certificateUser: cn

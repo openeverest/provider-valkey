@@ -31,8 +31,8 @@ help: ## Display this help.
 ##@ Development
 
 .PHONY: run
-run: generate ## Run the provider locally.
-	go run cmd/provider/main.go
+run: generate ## Run the provider locally, without the admission webhook (it needs the chart's certificate).
+	go run cmd/provider/main.go --admission=false
 
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint.
@@ -161,8 +161,12 @@ install-provider-cr: generate ## Install the Provider CR from the generated prov
 	} | kubectl apply -f -
 
 .PHONY: test-integration
-test-integration: ## Run integration tests (chainsaw) against a running cluster.
-	. ./test/vars.sh && chainsaw test --config ./test/integration/.chainsaw.yaml ./test/integration
+test-integration: ## Run integration tests (chainsaw) against a running cluster, except the admission suite.
+	. ./test/vars.sh && chainsaw test --config ./test/integration/.chainsaw.yaml --exclude-test-regex 'chainsaw/^admission$$' ./test/integration
+
+.PHONY: test-integration-admission
+test-integration-admission: ## Run admission webhook integration tests against the provider installed from the chart in provider-system.
+	. ./test/vars.sh && chainsaw test --config ./test/integration/.chainsaw.yaml ./test/integration/admission
 
 ##@ Local Development Cluster
 
