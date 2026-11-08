@@ -1,10 +1,7 @@
 package provider
 
 import (
-	"fmt"
-
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/openeverest/openeverest/v2/provider-runtime/controller"
@@ -42,43 +39,6 @@ func New(scrapes ScrapeConfig) *Provider {
 			},
 		},
 	}
-}
-
-// Validate checks that the Instance spec is valid for the Valkey provider.
-func (p *Provider) Validate(c *controller.Context) error {
-	l := log.FromContext(c.Context())
-	l.Info("Validating instance", "name", c.Name())
-
-	components := c.Instance().Spec.Components
-
-	// The engine component is required.
-	engine, ok := components[common.ComponentEngine]
-	if !ok {
-		return fmt.Errorf("the %q component is required", common.ComponentEngine)
-	}
-	if engine.Replicas != nil && *engine.Replicas < 0 {
-		return fmt.Errorf("engine replicas must not be negative")
-	}
-	if err := validateClusterName(c, ptr.Deref(engine.Replicas, 0)); err != nil {
-		return err
-	}
-
-	// The cluster topology requires at least three shards.
-	if c.Instance().GetTopologyType() == common.TopologyCluster {
-		shards, err := resolveShards(c)
-		if err != nil {
-			return err
-		}
-		if shards < minClusterShards {
-			return fmt.Errorf("the cluster topology requires at least %d shards, got %d", minClusterShards, shards)
-		}
-	}
-
-	if err := validateScrapes(c); err != nil {
-		return err
-	}
-
-	return validateTLS(c)
 }
 
 // Sync creates or updates the ValkeyCluster resource from the Instance spec.

@@ -1,0 +1,14 @@
+apiVersion: core.openeverest.io/v1alpha1
+kind: Instance
+metadata:
+  name: cache
+spec:
+  providerRef:
+    name: valkey
+  topology:
+    type: replication
+  components:
+    engine:
+      replicas: 1
+      storage:
+        size: 10Gi

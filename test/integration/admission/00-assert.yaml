@@ -1,0 +1,16 @@
+# The provider runs from the chart, which registers the admission webhook.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: provider-valkey
+  namespace: provider-system
+status:
+  readyReplicas: 1
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: provider-valkey.openeverest.io
+webhooks:
+  - name: instances.valkey.openeverest.io
+    failurePolicy: Ignore

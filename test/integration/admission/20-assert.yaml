@@ -1,0 +1,10 @@
+# The Instance admitted while the provider was down reports its error.
+apiVersion: core.openeverest.io/v1alpha1
+kind: Instance
+metadata:
+  name: test-valkey-admission
+status:
+  (conditions[?type == 'Ready']):
+    - status: "False"
+      reason: ValidationFailed
+      (contains(message, 'spec.components[engine].parameters.tls.certificateUser')): true

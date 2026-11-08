@@ -15,6 +15,7 @@
 package provider
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -22,6 +23,7 @@ import (
 	corev1alpha1 "github.com/openeverest/openeverest/v2/api/core/v1alpha1"
 	"github.com/openeverest/openeverest/v2/provider-runtime/controller"
 	valkeyv1alpha1 "github.com/valkey-io/valkey-operator/api/v1alpha1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 
 	"github.com/openeverest/provider-valkey/definition/components"
@@ -30,10 +32,6 @@ import (
 )
 
 const (
-	// minClusterShards is the minimum number of shards for the cluster topology.
-	// Valkey cluster mode requires at least three primaries.
-	minClusterShards = 3
-
 	// defaultClusterShards is used for the cluster topology when the user does
 	// not specify a shard count.
 	defaultClusterShards = 3
@@ -53,11 +51,7 @@ func buildClusterSpec(c *controller.Context) (valkeyv1alpha1.ValkeyClusterSpec, 
 
 	engine := c.Instance().Spec.Components[common.ComponentEngine]
 
-	shards, err := resolveShards(c)
-	if err != nil {
-		return spec, err
-	}
-	spec.Shards = shards
+	spec.Shards = resolveShards(c.Instance())
 
 	if engine.Replicas != nil {
 		spec.Replicas = *engine.Replicas
@@ -125,7 +119,7 @@ func buildClusterSpec(c *controller.Context) (valkeyv1alpha1.ValkeyClusterSpec, 
 						SecretName: tlsSecretName(c.Name()),
 					},
 				},
-				ClientAuth: buildClientAuth(engineTLSConfig(c)),
+				ClientAuth: buildClientAuth(engineTLSConfig(c.Instance())),
 			},
 		}
 	}
@@ -199,9 +193,6 @@ func resolveEngineImage(c *controller.Context, engine corev1alpha1.ComponentSpec
 	return image, nil
 }
 
-// resolveShards returns the number of shards for the Instance's topology.
-// The replication topology is always a single shard; the cluster topology
-// reads numShards from its topology config (defaulting to defaultClusterShards).
 // clusterNameBudget is how many characters valkey-operator allows, for a
 // StatefulSet cluster, for the name plus the highest shard index (shards-1)
 // and node index (replicas) together: the StatefulSet valkey-<name>-<shard>-<node>
@@ -211,29 +202,30 @@ const clusterNameBudget = 43
 // validateClusterName mirrors the valkey-operator admission rule on the
 // ValkeyCluster name, so that a name too long for the instance's StatefulSets
 // fails validation instead of every apply of the ValkeyCluster.
-func validateClusterName(c *controller.Context, replicas int32) error {
-	shards, err := resolveShards(c)
-	if err != nil {
-		return err
-	}
+func validateClusterName(in *corev1alpha1.Instance, replicas int32) field.ErrorList {
+	shards := resolveShards(in)
 	indexDigits := len(strconv.Itoa(int(shards-1))) + len(strconv.Itoa(int(replicas)))
-	if maxLen := clusterNameBudget - indexDigits; len(c.Name()) > maxLen {
-		return fmt.Errorf("the instance name %q is too long: with %d shard(s) and %d replica(s) per shard "+
-			"it must be at most %d characters", c.Name(), shards, replicas, maxLen)
+	if maxLen := clusterNameBudget - indexDigits; len(in.Name) > maxLen {
+		return field.ErrorList{field.Invalid(field.NewPath("metadata", "name"), in.Name, fmt.Sprintf(
+			"must be at most %d characters with %d shard(s) and %d replica(s) per shard", maxLen, shards, replicas,
+		))}
 	}
 	return nil
 }
 
-func resolveShards(c *controller.Context) (int32, error) {
-	if c.Instance().GetTopologyType() != common.TopologyCluster {
-		return 1, nil
+// resolveShards returns the number of shards for the Instance's topology.
+// The replication topology is always a single shard; the cluster topology
+// reads numShards from its topology config (defaulting to defaultClusterShards).
+func resolveShards(in *corev1alpha1.Instance) int32 {
+	if in.GetTopologyType() != common.TopologyCluster {
+		return 1
 	}
 
 	var cfg cluster.ClusterTopologyConfig
-	if c.TryDecodeTopologyParameters(&cfg) && cfg.NumShards > 0 {
-		return cfg.NumShards, nil
+	if params := in.GetTopologyParameters(); params != nil && json.Unmarshal(params.Raw, &cfg) == nil && cfg.NumShards > 0 {
+		return cfg.NumShards
 	}
-	return defaultClusterShards, nil
+	return defaultClusterShards
 }
 
 // buildConnectionDetails returns the well-known connection details for the
@@ -279,7 +271,7 @@ func buildConnectionDetails(c *controller.Context) (controller.ConnectionDetails
 			tlsSecretKeyCA: string(ca),
 		}
 
-		if clientCertificatesAccepted(engineTLSConfig(c)) {
+		if clientCertificatesAccepted(engineTLSConfig(c.Instance())) {
 			certPEM, keyPEM, ok, err := readClientCert(c)
 			if err != nil {
 				return controller.ConnectionDetails{}, err

@@ -1,0 +1,24 @@
+apiVersion: core.openeverest.io/v1alpha1
+kind: Instance
+metadata:
+  name: sessions
+spec:
+  providerRef:
+    name: valkey
+  topology:
+    type: cluster
+    parameters:
+      numShards: 3
+  components:
+    engine:
+      replicas: 1
+      storage:
+        size: 10Gi
+    monitoring:
+      resources:
+        limits:
+          memory: 128Mi
+      parameters:
+        metrics:
+          prometheus:
+            enabled: true

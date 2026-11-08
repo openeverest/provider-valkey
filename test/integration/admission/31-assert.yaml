@@ -1,0 +1,14 @@
+apiVersion: core.openeverest.io/v1alpha1
+kind: Instance
+metadata:
+  name: test-valkey-admission
+spec:
+  components:
+    engine:
+      resources:
+        limits:
+          cpu: "2"
+status:
+  (conditions[?type == 'Ready']):
+    - status: "False"
+      reason: ValidationFailed

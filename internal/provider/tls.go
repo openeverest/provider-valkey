@@ -20,6 +20,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -30,8 +31,10 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	corev1alpha1 "github.com/openeverest/openeverest/v2/api/core/v1alpha1"
 	"github.com/openeverest/openeverest/v2/provider-runtime/controller"
 	valkeyv1alpha1 "github.com/valkey-io/valkey-operator/api/v1alpha1"
 
@@ -67,7 +70,12 @@ const (
 	// certificateUserMinMajorVersion is the first Valkey major version with
 	// tls-auth-clients-user CN.
 	certificateUserMinMajorVersion = 9
+
+	clientAuthRelaxedDetail = "cannot be changed from required on a running instance: " +
+		"valkey-operator would lose access to the nodes that still require client certificates"
 )
+
+var tlsPath = componentsPath.Key(common.ComponentEngine).Child("parameters", "tls")
 
 // tlsSecretName returns the name of the TLS secret for the given instance.
 func tlsSecretName(instance string) string {
@@ -84,13 +92,13 @@ func tlsClientSecretName(instance string) string {
 
 // engineTLSConfig returns the engine's TLS parameters, or the zero value when
 // none are set.
-func engineTLSConfig(c *controller.Context) components.ValkeyTLSConfig {
-	engine, ok := c.Instance().Spec.Components[common.ComponentEngine]
-	if !ok {
+func engineTLSConfig(in *corev1alpha1.Instance) components.ValkeyTLSConfig {
+	engine, ok := in.Spec.Components[common.ComponentEngine]
+	if !ok || engine.Parameters == nil {
 		return components.ValkeyTLSConfig{}
 	}
 	var cfg components.ValkeyEngineConfig
-	if c.TryDecodeComponentParameters(engine, &cfg) && cfg.TLS != nil {
+	if json.Unmarshal(engine.Parameters.Raw, &cfg) == nil && cfg.TLS != nil {
 		return *cfg.TLS
 	}
 	return components.ValkeyTLSConfig{}
@@ -100,7 +108,7 @@ func engineTLSConfig(c *controller.Context) components.ValkeyTLSConfig {
 // TLS is on by default and can be turned off with the engine component's
 // tls.mode=disabled.
 func tlsEnabled(c *controller.Context) bool {
-	return engineTLSConfig(c).Mode != components.TLSModeDisabled
+	return engineTLSConfig(c.Instance()).Mode != components.TLSModeDisabled
 }
 
 // clientCertificatesAccepted reports whether Valkey verifies the client
@@ -140,112 +148,130 @@ func buildClientAuth(cfg components.ValkeyTLSConfig) *valkeyv1alpha1.TLSClientAu
 }
 
 // validateTLS rejects client authentication settings that cannot take effect.
-func validateTLS(c *controller.Context) error {
-	cfg := engineTLSConfig(c)
-	if cfg.ClientAuth != components.TLSClientAuthRequired {
-		if err := validateClientAuthNotRelaxed(c); err != nil {
-			return err
+func validateTLS(spec *corev1alpha1.ProviderSpec, in *corev1alpha1.Instance) field.ErrorList {
+	cfg := engineTLSConfig(in)
+	if cfg.Mode == components.TLSModeDisabled {
+		var errs field.ErrorList
+		if cfg.ClientAuth == components.TLSClientAuthRequired {
+			errs = append(errs, field.Invalid(tlsPath.Child("clientAuth"), cfg.ClientAuth,
+				"needs transport encryption (tls.mode=enabled)",
+			))
 		}
+		if cfg.CertificateUser == components.TLSCertificateUserCN {
+			errs = append(errs, field.Invalid(tlsPath.Child("certificateUser"), cfg.CertificateUser,
+				"needs transport encryption (tls.mode=enabled)",
+			))
+		}
+		return errs
 	}
-	if !clientCertificateNeeded(cfg) {
+	if cfg.CertificateUser != components.TLSCertificateUserCN {
 		return nil
 	}
-	if !tlsEnabled(c) {
-		if cfg.ClientAuth == components.TLSClientAuthRequired {
-			return errors.New("tls.clientAuth=required needs transport encryption (tls.mode=enabled)")
-		}
-		return errors.New("tls.certificateUser=cn needs transport encryption (tls.mode=enabled)")
-	}
 	if cfg.ClientAuth == components.TLSClientAuthDisabled {
-		return errors.New("tls.certificateUser=cn has no effect with tls.clientAuth=disabled")
+		return field.ErrorList{field.Invalid(tlsPath.Child("certificateUser"), cfg.CertificateUser,
+			"has no effect with tls.clientAuth=disabled",
+		)}
 	}
-	if cfg.CertificateUser == components.TLSCertificateUserCN {
-		if err := validateCertificateUserVersion(c); err != nil {
-			return err
+	return validateCertificateUserVersion(spec, in)
+}
+
+// validateTLSTransition rejects, on an update of an instance the provider has
+// created, moving off required client certificates. valkey-operator (as of
+// v0.8.0) stops presenting its own client certificate as soon as the spec no
+// longer requires one, which locks it out of the nodes that have not rolled
+// yet and stalls the cluster. validateTLSReferences checks the same at
+// reconcile time, against the ValkeyCluster.
+func validateTLSTransition(in, old *corev1alpha1.Instance) field.ErrorList {
+	if old == nil || old.Status.Phase == "" || old.Status.Phase == corev1alpha1.InstancePhasePending {
+		return nil
+	}
+	before, after := engineTLSConfig(old), engineTLSConfig(in)
+	if before.Mode != components.TLSModeDisabled && before.ClientAuth == components.TLSClientAuthRequired &&
+		after.ClientAuth != components.TLSClientAuthRequired {
+		return field.ErrorList{field.Forbidden(tlsPath.Child("clientAuth"), clientAuthRelaxedDetail)}
+	}
+	return nil
+}
+
+// validateTLSReferences checks that a running cluster keeps requiring client
+// certificates, and that an instance whose settings need a client certificate
+// has the CA key to issue one.
+func validateTLSReferences(c *controller.Context) (field.ErrorList, error) {
+	cfg := engineTLSConfig(c.Instance())
+	if cfg.ClientAuth != components.TLSClientAuthRequired {
+		vc := &valkeyv1alpha1.ValkeyCluster{}
+		if err := c.Get(vc, c.Name()); client.IgnoreNotFound(err) != nil {
+			return nil, fmt.Errorf("get ValkeyCluster: %w", err)
 		}
+		if vc.GetTLS().ClientAuthMode() == valkeyv1alpha1.TLSAuthClientsRequired {
+			return field.ErrorList{field.Forbidden(tlsPath.Child("clientAuth"), clientAuthRelaxedDetail)}, nil
+		}
+	}
+	if !tlsEnabled(c) || !clientCertificateNeeded(cfg) {
+		return nil, nil
 	}
 
 	// Instances created before the provider kept the CA key cannot have a
 	// client certificate issued without replacing their CA.
 	hasServerCert, err := c.Exists(&corev1.Secret{}, tlsSecretName(c.Name()))
 	if err != nil || !hasServerCert {
-		return err
+		return nil, err
 	}
 	hasCA, err := c.Exists(&corev1.Secret{}, tlsCASecretName(c.Name()))
 	if err != nil || hasCA {
-		return err
+		return nil, err
 	}
 	hasClientCert, err := c.Exists(&corev1.Secret{}, tlsClientSecretName(c.Name()))
 	if err != nil || hasClientCert {
-		return err
+		return nil, err
 	}
-	return fmt.Errorf("the instance has no CA key to issue client certificates with; "+
-		"delete the %q secret to regenerate the TLS material, then restart the Valkey pods",
-		tlsSecretName(c.Name()))
-}
-
-// validateClientAuthNotRelaxed rejects moving a running cluster off required
-// client certificates. valkey-operator (as of v0.8.0) stops presenting its own client
-// certificate as soon as the spec no longer requires one, which locks it out
-// of the nodes that have not rolled yet and stalls the cluster.
-func validateClientAuthNotRelaxed(c *controller.Context) error {
-	vc := &valkeyv1alpha1.ValkeyCluster{}
-	if err := c.Get(vc, c.Name()); err != nil {
-		return client.IgnoreNotFound(err)
+	path, value := tlsPath.Child("certificateUser"), cfg.CertificateUser
+	if cfg.ClientAuth == components.TLSClientAuthRequired {
+		path, value = tlsPath.Child("clientAuth"), cfg.ClientAuth
 	}
-	if vc.GetTLS().ClientAuthMode() == valkeyv1alpha1.TLSAuthClientsRequired {
-		return errors.New("tls.clientAuth cannot be changed from required on a running instance: " +
-			"valkey-operator would lose access to the nodes that still require client certificates")
-	}
-	return nil
+	return field.ErrorList{field.Invalid(path, value, fmt.Sprintf(
+		"the instance has no CA key to issue client certificates with; "+
+			"delete the %q secret to regenerate the TLS material, then restart the Valkey pods",
+		tlsSecretName(c.Name()),
+	))}, nil
 }
 
 // validateCertificateUserVersion rejects certificate-to-user mapping on Valkey
 // versions without it. A custom image has no known version and is accepted.
-func validateCertificateUserVersion(c *controller.Context) error {
-	version, known, err := engineVersion(c)
-	if err != nil || !known {
-		return err
-	}
-	major, err := strconv.Atoi(strings.SplitN(version, ".", 2)[0])
-	if err != nil {
+func validateCertificateUserVersion(spec *corev1alpha1.ProviderSpec, in *corev1alpha1.Instance) field.ErrorList {
+	version, known := engineVersion(spec, in)
+	if !known {
 		return nil
 	}
-	if major < certificateUserMinMajorVersion {
-		return fmt.Errorf("tls.certificateUser=cn requires Valkey %d.0 or later, the instance runs %s",
-			certificateUserMinMajorVersion, version)
+	major, err := strconv.Atoi(strings.SplitN(version, ".", 2)[0])
+	if err != nil || major >= certificateUserMinMajorVersion {
+		return nil
 	}
-	return nil
+	return field.ErrorList{field.Invalid(tlsPath.Child("certificateUser"), components.TLSCertificateUserCN,
+		fmt.Sprintf("requires Valkey %d.0 or later, the instance runs %s", certificateUserMinMajorVersion, version),
+	)}
 }
 
 // engineVersion returns the Valkey version the instance runs, resolved the way
 // the runtime does before Sync. known is false for a custom image.
-func engineVersion(c *controller.Context) (version string, known bool, err error) {
-	engine := c.Instance().Spec.Components[common.ComponentEngine]
+func engineVersion(spec *corev1alpha1.ProviderSpec, in *corev1alpha1.Instance) (version string, known bool) {
+	engine := in.Spec.Components[common.ComponentEngine]
 	if engine.Image != "" {
-		return "", false, nil
+		return "", false
 	}
 	if engine.Version != "" {
-		return engine.Version, true, nil
+		return engine.Version, true
 	}
 
-	spec, err := c.ProviderSpec()
-	if err != nil {
-		return "", false, err
-	}
-	if name := controller.EffectiveVersionBundleName(spec, c.Instance()); name != "" {
-		bundle, err := controller.ResolveVersionBundle(spec, name)
-		if err != nil {
-			return "", false, err
-		}
-		if v := bundle.Components[common.ComponentEngine]; v != "" {
-			return v, true, nil
+	if name := controller.EffectiveVersionBundleName(spec, in); name != "" {
+		if bundle, err := controller.ResolveVersionBundle(spec, name); err == nil && bundle.Components[common.ComponentEngine] != "" {
+			return bundle.Components[common.ComponentEngine], true
 		}
 	}
 	if ct, ok := spec.ComponentTypes[controller.GetComponentType(spec, common.ComponentEngine)]; ok && ct.DefaultVersion != "" {
-		return ct.DefaultVersion, true, nil
+		return ct.DefaultVersion, true
 	}
-	return "", false, nil
+	return "", false
 }
 
 // ensureTLSSecret creates the instance CA and the server certificate when the
@@ -300,7 +326,7 @@ func ensureTLSSecret(c *controller.Context) error {
 
 // ensureClientCertSecret issues the default user's client certificate, signed
 // by the instance CA, and re-issues it when the CA has changed. Instances
-// without a CA key get none (validateTLS rejects the settings that need one).
+// without a CA key get none (validateTLSReferences rejects the settings that need one).
 func ensureClientCertSecret(c *controller.Context) error {
 	caSecret := &corev1.Secret{}
 	if err := c.Get(caSecret, tlsCASecretName(c.Name())); err != nil {

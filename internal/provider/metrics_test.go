@@ -244,13 +244,19 @@ func TestValidateScrapes(t *testing.T) {
 		name       string
 		parameters string
 		served     []schema.GroupVersionKind
-		wantErr    string
+		want       []string
 	}{
 		{name: "nothing enabled needs no operator", parameters: ""},
 		{name: "prometheus with its operator", parameters: prometheusOnly, served: []schema.GroupVersionKind{podMonitorGVK}},
-		{name: "prometheus without its operator", parameters: prometheusOnly, served: []schema.GroupVersionKind{vmPodScrapeGVK}, wantErr: "Prometheus Operator"},
+		{
+			name: "prometheus without its operator", parameters: prometheusOnly, served: []schema.GroupVersionKind{vmPodScrapeGVK},
+			want: []string{"spec.components[monitoring].parameters.metrics.prometheus.enabled"},
+		},
 		{name: "victoriametrics with its operator", parameters: victoriaMetricsOnly, served: []schema.GroupVersionKind{vmPodScrapeGVK}},
-		{name: "victoriametrics without its operator", parameters: victoriaMetricsOnly, served: []schema.GroupVersionKind{podMonitorGVK}, wantErr: "VictoriaMetrics Operator"},
+		{
+			name: "victoriametrics without its operator", parameters: victoriaMetricsOnly, served: []schema.GroupVersionKind{podMonitorGVK},
+			want: []string{"spec.components[monitoring].parameters.metrics.victoriaMetrics.enabled"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -261,15 +267,16 @@ func TestValidateScrapes(t *testing.T) {
 			cl := fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithRESTMapper(mapper).Build()
 			c := controller.NewContext(context.Background(), cl, newMonitoredInstance(tt.parameters), common.ProviderName)
 
-			err := validateScrapes(c)
-			if tt.wantErr == "" {
-				if err != nil {
-					t.Fatalf("validateScrapes: %v", err)
-				}
-				return
+			errs, err := validateScrapes(c)
+			if err != nil {
+				t.Fatalf("validateScrapes: %v", err)
 			}
-			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
-				t.Fatalf("validateScrapes() error = %v, want one naming the %s", err, tt.wantErr)
+			var got []string
+			for _, e := range errs {
+				got = append(got, e.Field)
+			}
+			if !slices.Equal(got, tt.want) {
+				t.Fatalf("validateScrapes() = %v, want errors on %v", errs, tt.want)
 			}
 		})
 	}
