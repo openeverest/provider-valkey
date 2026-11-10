@@ -1,0 +1,30 @@
+---
+# The valkey-operator is pinned twice: as a Go module (its API types, in go.mod)
+# and as the bundled Helm subchart (charts/provider-valkey/Chart.yaml). Both are
+# placed in one multi-ecosystem group so a new operator release arrives as a
+# single PR that bumps them together.
+version: 2
+
+multi-ecosystem-groups:
+  valkey-operator:
+    schedule:
+      interval: "daily"
+    labels:
+      - "dependencies"
+
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/"
+    allow:
+      - dependency-name: "github.com/valkey-io/valkey-operator"
+    patterns:
+      - "github.com/valkey-io/valkey-operator"
+    multi-ecosystem-group: "valkey-operator"
+
+  - package-ecosystem: "helm"
+    directory: "/charts/provider-valkey"
+    allow:
+      - dependency-name: "valkey-operator"
+    patterns:
+      - "valkey-operator"
+    multi-ecosystem-group: "valkey-operator"
