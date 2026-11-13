@@ -61,7 +61,7 @@ provider itself is covered under [Installation](#installation).
 | Vertical scaling (CPU / memory) | ✅ | Per-component `resources` |
 | Version upgrades | ✅ | Select a version bundle with `spec.version` |
 | Custom configuration | ✅ | Passthrough Valkey config via engine `parameters.config` |
-| Monitoring | ✅ | Optional metrics exporter sidecar, scraped by Prometheus (`PodMonitor`) and/or VictoriaMetrics (`VMPodScrape`) |
+| Monitoring | ✅ | Metrics through OpenEverest monitoring destinations (exporter sidecar, run on demand); see [Monitoring](#monitoring) |
 | TLS | ✅ | Self-signed CA + server certificate, on by default |
 | Mutual TLS | ✅ | Optional or required client certificates; a client certificate is issued for the default user |
 
@@ -97,9 +97,9 @@ helm install provider-valkey \
   chart and kept across upgrades; set `admission.certManager.enabled=true` to have
   cert-manager issue it, or supply one through `admission.certs`. If the provider is down,
   writes are admitted and the `Instance` reports the errors in its `Ready` condition.
-  Problems with other objects, such as a monitoring operator the `Instance` enables that is
-  not installed, are never a reason to reject it: `kubectl` prints a warning, and the
-  `Instance` reports them once created.
+  Problems with other objects, such as a missing user Secret named by `spec.userSecretRef`,
+  are never a reason to reject it: `kubectl` prints a warning, and the `Instance` reports
+  them once created.
 
 Upgrade and uninstall:
 
@@ -144,12 +144,15 @@ did not set them rolls every Valkey pod once. With replicas, the operator fails 
 rolls a primary. **An instance with no replicas and no persistent storage loses its data on that
 roll**: add a replica or back the data up before upgrading.
 
-The monitoring component no longer implies Prometheus scraping. Each monitoring system is
-switched on per instance (see [Metrics](#configuration)), and the scrape resources are named
-`<instance>-prometheus` and `<instance>-victoriametrics`. On upgrade the provider deletes the
-`<instance>-metrics` PodMonitor of earlier versions, so instances with the monitoring component
-stop being scraped until `metrics.prometheus.enabled` or `metrics.victoriaMetrics.enabled` is
-set; the exporter keeps running. The chart value `podMonitor.enabled` is gone.
+**Monitoring moved to OpenEverest monitoring destinations.** The provider no longer creates
+`PodMonitor`s or `VMPodScrape`s, and on upgrade it deletes the ones earlier releases created
+(`<instance>-metrics`, `<instance>-prometheus`, `<instance>-victoriametrics`, and the
+`VMPodScrape`s the VictoriaMetrics Operator converted from the `PodMonitor`s). To keep
+collecting metrics, list a destination on each Instance (see [Monitoring](#monitoring)). The
+`metrics.prometheus.enabled` and `metrics.victoriaMetrics.enabled` parameters of the
+`monitoring` component are deprecated and ignored, but still accepted. The chart values
+`podMonitor.labels` and `vmPodScrape.labels` are gone. Instances with the `monitoring`
+component keep running the exporter, so their pods do not roll.
 
 Uninstalling the chart does **not** delete running `Instance` resources or their data.
 
@@ -285,34 +288,54 @@ Technology-specific knobs:
   Tightening `clientAuth` to `required` on a running instance is supported; relaxing it from
   `required` is rejected, because valkey-operator (as of v0.8.0) stops presenting its client
   certificate before the nodes stop requiring one and loses access to the cluster.
-- **Metrics** — the `monitoring` component runs a metrics exporter sidecar next to every
-  Valkey server. Its parameters choose the monitoring systems that scrape it:
-
-  ```yaml
-  spec:
-    components:
-      monitoring:
-        type: exporter
-        parameters:
-          metrics:
-            prometheus:
-              enabled: true
-            victoriaMetrics:
-              enabled: false
-  ```
-
-  Prometheus gets a `PodMonitor` (`<instance>-prometheus`), VictoriaMetrics a `VMPodScrape`
-  (`<instance>-victoriametrics`). Both live next to the Instance and are removed with it or
-  when switched off. Series carry `core_openeverest_io_instance`, `core_openeverest_io_component`,
-  `valkey_io_shard_index` and `valkey_io_node_index`. Keep in mind:
-
-  - The matching operator must be installed; otherwise the Instance fails validation.
-  - The monitoring system must select the resource. Chart values `podMonitor.labels` and
-    `vmPodScrape.labels` label every `PodMonitor` / `VMPodScrape`, e.g. `release: <release-name>`
-    for the kube-prometheus-stack `podMonitorSelector`.
-  - The VictoriaMetrics Operator converts `PodMonitor`s into `VMPodScrape`s by default, so with
-    both systems enabled VictoriaMetrics scrapes the instance twice.
 - **Cluster shards** — set `topology.parameters.numShards` (cluster topology only, minimum 3).
+
+## Monitoring
+
+Monitoring is an OpenEverest extension. The provider declares that Valkey's metrics come from
+an exporter (the `valkey` component type, `kind: valkey`, `metrics: Exporter`) and publishes
+the exporter's endpoint in `Instance.status.monitoring.sources`; the extension behind a
+monitoring destination creates the scrape objects. To send an instance's metrics somewhere:
+
+1. Install a monitoring extension, such as
+   [monitoring-prometheus](https://github.com/openeverest/monitoring-prometheus), and check
+   that its class is accepted: `kubectl get monitoringclass`.
+2. Create a `MonitoringDestination` of that class in the instance's namespace.
+3. List it on the Instance, or add it from the UI's **Edit monitoring** dialog:
+
+   ```yaml
+   spec:
+     monitoring:
+       destinations:
+         - name: metrics
+           destinationRef:
+             name: prometheus
+   ```
+
+Core creates a `MonitoringBinding` per entry. While a bound class needs metrics, the provider
+runs the [redis_exporter](https://github.com/oliver006/redis_exporter) sidecar of the
+instance's version bundle in every Valkey pod and publishes its endpoint (port `metrics`,
+`/metrics`) once a pod serves it. Adding the sidecar, and removing it when the last such
+destination goes, rolls the Valkey pods; core reports this as the `RollingRestart` disruption
+on the class.
+
+To scrape the exporter with a Prometheus you run yourself, add the optional `monitoring`
+component instead ("Metrics exporter" in the UI). It runs the sidecar whatever the
+destinations, with the image, version and resources you give it:
+
+```yaml
+spec:
+  components:
+    monitoring:
+      type: exporter
+      resources:
+        limits:
+          cpu: 100m
+          memory: 128Mi
+```
+
+Its `metrics.prometheus.enabled` and `metrics.victoriaMetrics.enabled` parameters are
+deprecated and ignored: earlier releases created a `PodMonitor` or `VMPodScrape` from them.
 
 ## Development
 
@@ -363,7 +386,7 @@ code generation, and the backup/restore interfaces are documented once for all p
   The admission suite needs the provider installed from the chart as `provider-valkey` in
   `provider-system`, so `make test-integration` skips it; run it with
   `make test-integration-admission`.
-- **E2E tests** — suites under [test/e2e/](test/e2e/) (`presets`) and the admission suite,
+- **E2E tests** — suites under [test/e2e/](test/e2e/) (`presets`, `monitoring`) and the admission suite,
   which need the provider installed from its chart, with the valkey-operator, and the
   OpenEverest controller running:
 
@@ -379,6 +402,7 @@ code generation, and the backup/restore interfaces are documented once for all p
   make deploy-test-controller
   make test-integration-admission
   make test-e2e-presets
+  make test-e2e-monitoring
   ```
 - **CI** — `.github/workflows/ci.yaml` runs lint, build, unit tests, and generated-file
   verification; `.github/workflows/integration-test.yaml` runs the integration suites;

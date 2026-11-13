@@ -5,19 +5,21 @@ metadata:
   name: metrics
 spec:
   description: |
-    Metrics scraping lifecycle: create an Instance whose monitoring component
-    enables both Prometheus and VictoriaMetrics next to a PodMonitor left by an
-    earlier provider version, verify the provider creates a PodMonitor and a
-    VMPodScrape and removes the legacy PodMonitor, then turn Prometheus off and
-    finally remove the monitoring component.
+    The metrics exporter and the scrape resources of earlier releases: an
+    Instance with the monitoring component, carrying the deprecated scrape
+    parameters earlier UIs wrote, runs the exporter sidecar. The provider
+    deletes the PodMonitors and VMPodScrapes earlier releases created and
+    creates none. Removing the component, with no monitoring destination
+    listed, stops the exporter. The published sources and the monitoring
+    destinations are covered by the e2e monitoring suite.
   catch:
     - script:
         content: kubectl -n $NAMESPACE get instances.core.openeverest.io,valkeycluster,podmonitor,vmpodscrape -o yaml
   steps:
-    - name: scrape-with-both
+    - name: exporter-and-legacy-scrapes
       try:
         - apply:
-            file: 00-legacy-podmonitor.yaml
+            file: 00-legacy-scrapes.yaml
         - apply:
             file: 00-create-instance.yaml
         - assert:
@@ -25,22 +27,11 @@ spec:
         - error:
             file: 00-errors.yaml
 
-    - name: turn-prometheus-off
-      try:
-        - script:
-            content: |
-              kubectl -n $NAMESPACE patch instances.core.openeverest.io/test-valkey-metrics --type=merge \
-                -p '{"spec":{"components":{"monitoring":{"parameters":{"metrics":{"prometheus":{"enabled":false}}}}}}}'
-        - assert:
-            file: 10-assert.yaml
-        - error:
-            file: 10-errors.yaml
-
     - name: remove-monitoring
       try:
         - script:
             content: |
               kubectl -n $NAMESPACE patch instances.core.openeverest.io/test-valkey-metrics --type=json \
                 -p '[{"op":"remove","path":"/spec/components/monitoring"}]'
-        - error:
-            file: 20-errors.yaml
+        - assert:
+            file: 10-assert.yaml

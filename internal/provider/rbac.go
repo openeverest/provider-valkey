@@ -27,7 +27,13 @@ package provider
 // +kubebuilder:rbac:groups="",resources=secrets;configmaps;services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
 
-// Prometheus Operator PodMonitor and VictoriaMetrics Operator VMPodScrape
-// scraping the metrics exporter sidecars.
-// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=podmonitors,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=operator.victoriametrics.com,resources=vmpodscrapes,verbs=get;list;watch;create;update;patch;delete
+// Monitoring contract: the runtime watches the Instances' bindings and the
+// destinations and classes they reference, and reads the kube-system
+// namespace UID that identifies the cluster in the published sources.
+// +kubebuilder:rbac:groups=monitoring.openeverest.io,resources=monitoringclasses;monitoringdestinations;monitoringbindings,verbs=get;list;watch
+// +kubebuilder:rbac:groups=monitoring.openeverest.io,resources=monitoringbindings/status,verbs=patch
+// +kubebuilder:rbac:groups="",resources=namespaces,verbs=get
+
+// The PodMonitors and VMPodScrapes earlier releases created, deleted on upgrade.
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=podmonitors,verbs=delete
+// +kubebuilder:rbac:groups=operator.victoriametrics.com,resources=vmpodscrapes,verbs=delete

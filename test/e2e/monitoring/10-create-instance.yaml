@@ -1,0 +1,25 @@
+# No monitoring component: the destination alone runs the exporter.
+apiVersion: core.openeverest.io/v1alpha1
+kind: Instance
+metadata:
+  name: test-valkey-monitoring
+spec:
+  providerRef:
+    name: valkey
+  topology:
+    type: replication
+  components:
+    engine:
+      type: valkey
+      replicas: 0
+      resources:
+        limits:
+          cpu: 500m
+          memory: 512Mi
+      storage:
+        size: 1Gi
+  monitoring:
+    destinations:
+      - name: metrics
+        destinationRef:
+          name: metrics-e2e

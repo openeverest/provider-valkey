@@ -50,11 +50,20 @@ func engineParameters(raw string) func(*corev1alpha1.Instance) {
 	})
 }
 
+// monitoringParameters adds the monitoring component with the raw parameters.
+func monitoringParameters(raw string) func(*corev1alpha1.Instance) {
+	return func(in *corev1alpha1.Instance) {
+		in.Spec.Components[common.ComponentMonitoring] = corev1alpha1.ComponentSpec{
+			Parameters: &runtime.RawExtension{Raw: []byte(raw)},
+		}
+	}
+}
+
 // TestValidate runs the checks the runtime runs before every Sync: the
 // schemas, supportedFields and catalog the provider publishes, then Validate.
 func TestValidate(t *testing.T) {
 	t.Parallel()
-	v := validationtest.New(t, New(ScrapeConfig{}), providerSpecPath)
+	v := validationtest.New(t, New(), providerSpecPath)
 
 	tests := []struct {
 		name    string
@@ -205,6 +214,26 @@ func TestValidate(t *testing.T) {
 			mutate:  engineParameters(`{"tls":{"clientAuth":"required"}}`),
 			old:     func(in *corev1alpha1.Instance) { in.Status.Phase = corev1alpha1.InstancePhaseReady },
 		},
+		// The scrape parameters are deprecated and ignored, but earlier UIs
+		// wrote them into Instances, so they are still accepted.
+		{
+			name:    "deprecated scrape parameters, both on",
+			fixture: replicationFixture,
+			mutate: monitoringParameters(
+				`{"metrics":{"prometheus":{"enabled":true},"victoriaMetrics":{"enabled":true}}}`),
+		},
+		{
+			name:    "deprecated scrape parameters, both off",
+			fixture: clusterFixture,
+			mutate: monitoringParameters(
+				`{"metrics":{"prometheus":{"enabled":false},"victoriaMetrics":{"enabled":false}}}`),
+		},
+		{
+			name:    "unknown monitoring parameter",
+			fixture: replicationFixture,
+			mutate:  monitoringParameters(`{"metrics":{"otel":{"enabled":true}}}`),
+			want:    []string{"spec.components[monitoring].parameters.metrics.otel"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -235,7 +264,7 @@ func TestValidate(t *testing.T) {
 // shard and node indexes in the names of the instance's StatefulSets.
 func TestValidateClusterNameLength(t *testing.T) {
 	t.Parallel()
-	v := validationtest.New(t, New(ScrapeConfig{}), providerSpecPath)
+	v := validationtest.New(t, New(), providerSpecPath)
 
 	tests := []struct {
 		name     string

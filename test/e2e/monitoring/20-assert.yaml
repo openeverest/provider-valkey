@@ -1,0 +1,17 @@
+# Nothing needs the exporter any more: it stops and its endpoint goes.
+apiVersion: valkey.io/v1alpha1
+kind: ValkeyCluster
+metadata:
+  name: test-valkey-monitoring
+spec:
+  exporter:
+    enabled: false
+---
+apiVersion: core.openeverest.io/v1alpha1
+kind: Instance
+metadata:
+  name: test-valkey-monitoring
+status:
+  phase: Ready
+  (monitoring.destinations == null): true
+  (monitoring.sources.metrics == null): true

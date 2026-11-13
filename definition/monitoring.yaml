@@ -1,0 +1,13 @@
+# Monitoring contract, published by `provider-sdk generate` as
+# Provider.spec.monitoring.
+#
+# componentTypes: what each component type from provider.yaml exposes (its
+# kind is declared in provider.yaml). Valkey serves no OpenMetrics itself; the
+# provider runs the redis_exporter sidecar in the engine pods (port metrics,
+# /metrics) while a bound class needs metrics, so binding one rolls the pods.
+# There are no operator-native integrations: monitoring extensions scrape the
+# endpoints the provider publishes in Instance.status.monitoring.sources.
+
+componentTypes:
+  valkey:
+    metrics: Exporter

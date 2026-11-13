@@ -97,8 +97,8 @@ func buildClusterSpec(c *controller.Context) (valkeyv1alpha1.ValkeyClusterSpec, 
 		},
 	}
 
-	// The exporter sidecar is enabled only when the optional monitoring
-	// component is present on the Instance.
+	// The exporter sidecar runs with the optional monitoring component, or
+	// while a monitoring destination of the Instance needs metrics.
 	exporter, err := buildExporterSpec(c)
 	if err != nil {
 		return spec, err
@@ -139,32 +139,46 @@ func buildPodMetadata(c *controller.Context) *valkeyv1alpha1.EmbeddedObjectMetad
 	return &valkeyv1alpha1.EmbeddedObjectMetadata{Labels: labels}
 }
 
-// buildExporterSpec configures the metrics exporter based on the presence of
-// the monitoring component.
+// buildExporterSpec configures the metrics exporter sidecar: it runs when
+// exporterRequired says so, with the monitoring component's image, version
+// and resources when the Instance has the component, and the exporter of the
+// Instance's version bundle otherwise.
 func buildExporterSpec(c *controller.Context) (valkeyv1alpha1.ExporterSpec, error) {
-	monitoring, ok := c.Instance().Spec.Components[common.ComponentMonitoring]
-	if !ok {
+	required, err := exporterRequired(c)
+	if err != nil {
+		return valkeyv1alpha1.ExporterSpec{}, err
+	}
+	if !required {
 		return valkeyv1alpha1.ExporterSpec{Enabled: ptr.To(false)}, nil
 	}
 
 	exporter := valkeyv1alpha1.ExporterSpec{Enabled: ptr.To(true)}
+	monitoring, hasComponent := c.Instance().Spec.Components[common.ComponentMonitoring]
 
-	if monitoring.Image != "" {
+	if hasComponent && monitoring.Image != "" {
 		exporter.Image = monitoring.Image
 	} else {
 		spec, err := c.ProviderSpec()
 		if err != nil {
 			return exporter, err
 		}
-		if monitoring.Version != "" {
-			exporter.Image = controller.GetImageForVersion(spec, common.ComponentMonitoring, monitoring.Version)
+		version := monitoring.Version
+		if !hasComponent {
+			// The runtime resolves the bundle only for the components the
+			// Instance lists.
+			if bundle, err := controller.ResolveVersionBundle(spec, controller.EffectiveVersionBundleName(spec, c.Instance())); err == nil {
+				version = bundle.Components[common.ComponentMonitoring]
+			}
+		}
+		if version != "" {
+			exporter.Image = controller.GetImageForVersion(spec, common.ComponentMonitoring, version)
 		}
 		if exporter.Image == "" {
 			exporter.Image = controller.GetDefaultImageForComponent(spec, common.ComponentMonitoring)
 		}
 	}
 
-	if monitoring.Resources != nil {
+	if hasComponent && monitoring.Resources != nil {
 		exporter.Resources = *monitoring.Resources
 	}
 
