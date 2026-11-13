@@ -1,0 +1,22 @@
+# The Instance created from valkey-dev runs the preset's spec: one primary
+# without replicas (replicas: 0 is omitted from the ValkeyCluster).
+apiVersion: valkey.io/v1alpha1
+kind: ValkeyCluster
+metadata:
+  name: test-valkey-preset
+spec:
+  image: valkey/valkey:9.0.6
+  shards: 1
+  resources:
+    limits:
+      cpu: "1"
+      memory: 1Gi
+---
+apiVersion: core.openeverest.io/v1alpha1
+kind: Instance
+metadata:
+  name: test-valkey-preset
+  annotations:
+    openeverest.io/cluster-instance-preset: valkey-dev
+status:
+  phase: Ready
