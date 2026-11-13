@@ -1,0 +1,11 @@
+# Core matches the class to the provider: Valkey's metrics come from an
+# exporter sidecar, so binding the class rolls the engine pods.
+apiVersion: monitoring.openeverest.io/v1alpha1
+kind: MonitoringClass
+metadata:
+  name: valkey-metrics-e2e
+status:
+  (conditions[?type == 'Accepted'].status | [0]): "True"
+  (providers[?name == 'valkey'] | [0]):
+    mode: ExtensionManaged
+    disruption: RollingRestart

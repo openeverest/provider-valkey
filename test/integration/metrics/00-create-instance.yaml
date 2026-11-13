@@ -1,4 +1,5 @@
-# A replication Instance scraped by both Prometheus and VictoriaMetrics.
+# A replication Instance with the monitoring component. Its scrape parameters
+# are deprecated and ignored, but still accepted: earlier UIs wrote them.
 apiVersion: core.openeverest.io/v1alpha1
 kind: Instance
 metadata:
@@ -20,6 +21,10 @@ spec:
         size: 1Gi
     monitoring:
       type: exporter
+      resources:
+        limits:
+          cpu: 100m
+          memory: 128Mi
       parameters:
         metrics:
           prometheus:

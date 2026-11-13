@@ -16,6 +16,10 @@ const (
 	ComponentTypeValkey   = "valkey"
 	ComponentTypeExporter = "exporter"
 
+	// KindValkey is the kind of the valkey component type, declared in
+	// definition/provider.yaml and published on its monitoring endpoints.
+	KindValkey = "valkey"
+
 	// Topology names — must match the directory names under definition/topologies.
 	TopologyReplication = "replication"
 	TopologyCluster     = "cluster"

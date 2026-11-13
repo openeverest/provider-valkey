@@ -170,20 +170,6 @@ extraEnv: []
 # - name: MY_VAR
 #   value: "my-value"
 
-# Prometheus Operator PodMonitor created for every instance whose monitoring
-# component sets `metrics.prometheus.enabled`.
-podMonitor:
-  # -- Labels added to every PodMonitor so that the Prometheus podMonitorSelector
-  # picks them up, e.g. `release: kube-prometheus-stack`
-  labels: {}
-
-# VictoriaMetrics Operator VMPodScrape created for every instance whose
-# monitoring component sets `metrics.victoriaMetrics.enabled`.
-vmPodScrape:
-  # -- Labels added to every VMPodScrape so that the VMAgent podScrapeSelector
-  # picks them up
-  labels: {}
-
 # -- Additional volume mounts to add to the provider container
 extraVolumeMounts: []
 

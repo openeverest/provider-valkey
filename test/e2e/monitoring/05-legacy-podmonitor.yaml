@@ -1,0 +1,16 @@
+# The PodMonitor a release before the monitoring contract created for
+# metrics.prometheus.enabled. The provider deletes it.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: test-valkey-monitoring-prometheus
+  labels:
+    app.kubernetes.io/managed-by: everest
+    app.kubernetes.io/instance: test-valkey-monitoring
+spec:
+  selector:
+    matchLabels:
+      valkey.io/cluster: test-valkey-monitoring
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics

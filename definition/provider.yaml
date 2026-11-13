@@ -14,8 +14,17 @@ components:
   engine:
     type: valkey
     parametersSchema: ValkeyEngineConfig
-  # monitoring runs the metrics exporter sidecar on each pod; its parameters
-  # choose the monitoring systems that scrape it.
+  # monitoring runs the metrics exporter sidecar on each engine pod for a
+  # Prometheus the user runs. The exporter also runs, without the component,
+  # while a monitoring destination of the Instance needs metrics. Its
+  # parameters are deprecated and ignored.
   monitoring:
     type: exporter
     parametersSchema: MonitoringParameters
+
+# Component types: the kind of the software each type runs, published as
+# Provider.spec.componentTypes.<type>.kind and matched by monitoring classes.
+# Version catalogs stay in versions.yaml.
+componentTypes:
+  valkey:
+    kind: valkey

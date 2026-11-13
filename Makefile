@@ -57,10 +57,6 @@ manifests: controller-gen ## Generate RBAC manifests using controller-gen from k
 	} > config/rbac/role.yaml.tmp
 	@mv config/rbac/role.yaml.tmp config/rbac/role.yaml
 
-.PHONY: deepcopy
-deepcopy: controller-gen ## Generate DeepCopy methods for the provider's own API types.
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./internal/apis/..."
-
 .PHONY: helm-sync-rbac
 helm-sync-rbac: yq ## Sync generated RBAC rules into the Helm chart.
 	@echo "Syncing RBAC rules from config/rbac/role.yaml to Helm chart..."
@@ -72,18 +68,18 @@ helm-sync-rbac: yq ## Sync generated RBAC rules into the Helm chart.
 	@echo "Done."
 
 .PHONY: generate
-generate: manifests deepcopy helm-sync-rbac ## Run all code generation (RBAC + DeepCopy + Helm sync + provider spec from definition/).
+generate: manifests helm-sync-rbac ## Run all code generation (RBAC + Helm sync + provider spec from definition/).
 	go generate ./...
 	@echo "All generation complete."
 
 .PHONY: verify
 verify: ## Verify that generated files are up-to-date (for CI).
 	@$(MAKE) generate
-	@if git diff --quiet -- config/ internal/apis/ $(CHART_DIR)/generated/; then \
+	@if git diff --quiet -- config/ $(CHART_DIR)/generated/; then \
 		echo "Generated files are up-to-date."; \
 	else \
 		echo "ERROR: Generated files are out of date. Run 'make generate' and commit the changes."; \
-		git diff -- config/ internal/apis/ $(CHART_DIR)/generated/; \
+		git diff -- config/ $(CHART_DIR)/generated/; \
 		exit 1; \
 	fi
 
@@ -138,10 +134,10 @@ OPENEVEREST_CONTROLLER_IMG ?= ghcr.io/openeverest/openeverest-controller-dev:0.0
 _IMG_REPO = $(firstword $(subst :, ,$(IMG)))
 _IMG_TAG  = $(lastword $(subst :, ,$(IMG)))
 
-# Keep in sync with the prometheus-operator monitoring API pinned in go.mod.
+# The PodMonitor and VMPodScrape CRDs the integration tests install, so they
+# can check that the provider deletes the scrape resources earlier releases
+# created.
 PROMETHEUS_OPERATOR_VERSION ?= v0.94.1
-
-# The VMPodScrape types in internal/apis/victoriametrics follow this release.
 VICTORIA_METRICS_OPERATOR_VERSION ?= v0.75.1
 
 .PHONY: install-test-crds
@@ -155,7 +151,8 @@ install-test-crds: helm-deps ## Install the CRDs required by the integration tes
 	for crd in valkeyclusters valkeynodes; do \
 		tar -xzf $(CHART_DIR)/charts/valkey-operator-*.tgz -O valkey-operator/crds/valkey.io_$$crd.yaml | kubectl apply -f - || exit 1; \
 	done
-	# The provider creates PodMonitors and VMPodScrapes; only their CRDs are needed.
+	# Earlier releases created PodMonitors and VMPodScrapes, which the provider
+	# deletes; only their CRDs are needed.
 	kubectl apply --server-side -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/$(PROMETHEUS_OPERATOR_VERSION)/example/prometheus-operator-crd/monitoring.coreos.com_podmonitors.yaml
 	kubectl apply --server-side -f https://raw.githubusercontent.com/VictoriaMetrics/operator/$(VICTORIA_METRICS_OPERATOR_VERSION)/config/crd/overlay/crd.descriptionless.yaml
 
@@ -180,6 +177,10 @@ test-integration-admission: ## Run admission webhook integration tests against t
 .PHONY: test-e2e-presets
 test-e2e-presets: ## Run the ClusterInstancePreset e2e suite (provider from the chart, OpenEverest controller running).
 	. ./test/vars.sh && chainsaw test --config ./test/e2e/.chainsaw.yaml ./test/e2e/presets
+
+.PHONY: test-e2e-monitoring
+test-e2e-monitoring: ## Run the monitoring contract e2e suite (provider from the chart, OpenEverest controller running).
+	. ./test/vars.sh && chainsaw test --config ./test/e2e/.chainsaw.yaml ./test/e2e/monitoring
 
 .PHONY: load-image
 load-image: ## Import the provider image (IMG) into the k3d cluster.

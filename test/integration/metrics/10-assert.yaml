@@ -1,13 +1,9 @@
-# VictoriaMetrics keeps scraping, and the exporter keeps running.
+# Without the monitoring component and with no monitoring destination listed,
+# nothing needs the exporter.
 apiVersion: valkey.io/v1alpha1
 kind: ValkeyCluster
 metadata:
   name: test-valkey-metrics
 spec:
   exporter:
-    enabled: true
----
-apiVersion: operator.victoriametrics.com/v1beta1
-kind: VMPodScrape
-metadata:
-  name: test-valkey-metrics-victoriametrics
+    enabled: false

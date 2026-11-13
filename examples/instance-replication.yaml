@@ -51,6 +51,16 @@ spec:
       #   tls:
       #     mode: disabled
 
-    # Metrics exporter sidecar (optional)
+    # Metrics exporter sidecar (optional), for a Prometheus you run yourself:
+    # port "metrics", path /metrics on every Valkey pod.
     monitoring:
       type: exporter
+
+  # Send metrics to an OpenEverest monitoring destination instead (needs a
+  # monitoring extension such as monitoring-prometheus). It runs the exporter
+  # without the monitoring component.
+  # monitoring:
+  #   destinations:
+  #     - name: metrics
+  #       destinationRef:
+  #         name: prometheus

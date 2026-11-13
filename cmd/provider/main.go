@@ -21,12 +21,7 @@ func main() {
 	l := ctrl.Log.WithName("setup")
 	ctx := ctrl.SetupSignalHandler()
 
-	scrapes, err := provider.ScrapeConfigFromEnv()
-	if err != nil {
-		l.Error(err, "invalid scrape configuration")
-		os.Exit(1)
-	}
-	p := provider.New(scrapes)
+	p := provider.New()
 
 	opts := []reconciler.ReconcilerOption{
 		// Serve the health and readiness probes.

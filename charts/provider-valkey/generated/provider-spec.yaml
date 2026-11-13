@@ -9,6 +9,7 @@ spec:
           version: 1.80.0
     valkey:
       defaultVersion: 9.0.6
+      kind: valkey
       versions:
         - image: valkey/valkey:9.1.2
           version: 9.1.2
@@ -79,37 +80,47 @@ spec:
       parametersSchema:
         openAPIV3Schema:
           description: |-
-            MonitoringParameters holds the configuration of the monitoring component.
-            The component runs the metrics exporter sidecar next to every Valkey
-            server; the parameters choose which monitoring systems scrape it.
+            MonitoringParameters holds the configuration of the monitoring component,
+            which runs the metrics exporter sidecar next to every Valkey server.
+
+            Deprecated: the parameters have no effect. Earlier releases created a
+            PodMonitor or VMPodScrape from them; to collect metrics, list a monitoring
+            destination in spec.monitoring.destinations, or scrape the exporter
+            yourself. They are still accepted, since Instances created by earlier UIs
+            carry them.
           properties:
             metrics:
               description: |-
-                Metrics configures which monitoring systems scrape the exporter.
-                If not specified, the exporter runs but nothing is created to scrape it.
+                Deprecated: has no effect. Earlier releases created the scrape
+                resources it lists; list a monitoring destination in
+                spec.monitoring.destinations instead.
               properties:
                 prometheus:
-                  description: Prometheus configures scraping by the Prometheus Operator.
+                  description: |-
+                    Deprecated: has no effect. Earlier releases created a PodMonitor for
+                    the Prometheus Operator.
                   properties:
                     enabled:
-                      description: |-
-                        Enabled creates the monitoring system's scrape resource for the
-                        instance: a PodMonitor for Prometheus, a VMPodScrape for VictoriaMetrics.
+                      description: 'Deprecated: has no effect.'
                       type: boolean
                   type: object
                 victoriaMetrics:
-                  description: VictoriaMetrics configures scraping by the VictoriaMetrics Operator.
+                  description: |-
+                    Deprecated: has no effect. Earlier releases created a VMPodScrape for
+                    the VictoriaMetrics Operator.
                   properties:
                     enabled:
-                      description: |-
-                        Enabled creates the monitoring system's scrape resource for the
-                        instance: a PodMonitor for Prometheus, a VMPodScrape for VictoriaMetrics.
+                      description: 'Deprecated: has no effect.'
                       type: boolean
                   type: object
               type: object
           type: object
       type: exporter
   defaultVersion: "9.0"
+  monitoring:
+    componentTypes:
+      valkey:
+        metrics: Exporter
   release:
     version: 0.1.0
   topologies:
@@ -285,30 +296,16 @@ spec:
                     - memory
                   groupType: line
                   uiType: group
-                prometheus:
-                  fieldParams:
-                    helperText: Create a PodMonitor so the Prometheus Operator scrapes the metrics.
-                    label: Prometheus
-                  path: spec.components.monitoring.parameters.metrics.prometheus.enabled
-                  uiType: toggle
-                victoriaMetrics:
-                  fieldParams:
-                    helperText: Create a VMPodScrape so the VictoriaMetrics Operator scrapes the metrics.
-                    label: VictoriaMetrics
-                  path: spec.components.monitoring.parameters.metrics.victoriaMetrics.enabled
-                  uiType: toggle
               componentsOrder:
                 - exporterResources
-                - prometheus
-                - victoriaMetrics
-              description: Run a metrics exporter next to every Valkey server to expose metrics in the Prometheus format.
+              description: Run a metrics exporter next to every Valkey server, on the port named metrics at /metrics.
               groupType: toggleable
               label: Expose metrics
               uiType: group
           componentsOrder:
             - metrics
-          description: Collect database metrics with Prometheus or VictoriaMetrics.
-          label: Monitoring
+          description: 'Expose Valkey metrics in the Prometheus format for a monitoring system you run. To send metrics to an OpenEverest monitoring destination, add the destination under Monitoring instead: it runs the exporter on its own.'
+          label: Metrics exporter
         resources:
           components:
             numberOfReplicas:
@@ -508,30 +505,16 @@ spec:
                     - memory
                   groupType: line
                   uiType: group
-                prometheus:
-                  fieldParams:
-                    helperText: Create a PodMonitor so the Prometheus Operator scrapes the metrics.
-                    label: Prometheus
-                  path: spec.components.monitoring.parameters.metrics.prometheus.enabled
-                  uiType: toggle
-                victoriaMetrics:
-                  fieldParams:
-                    helperText: Create a VMPodScrape so the VictoriaMetrics Operator scrapes the metrics.
-                    label: VictoriaMetrics
-                  path: spec.components.monitoring.parameters.metrics.victoriaMetrics.enabled
-                  uiType: toggle
               componentsOrder:
                 - exporterResources
-                - prometheus
-                - victoriaMetrics
-              description: Run a metrics exporter next to every Valkey server to expose metrics in the Prometheus format.
+              description: Run a metrics exporter next to every Valkey server, on the port named metrics at /metrics.
               groupType: toggleable
               label: Expose metrics
               uiType: group
           componentsOrder:
             - metrics
-          description: Collect database metrics with Prometheus or VictoriaMetrics.
-          label: Monitoring
+          description: 'Expose Valkey metrics in the Prometheus format for a monitoring system you run. To send metrics to an OpenEverest monitoring destination, add the destination under Monitoring instead: it runs the exporter on its own.'
+          label: Metrics exporter
         resources:
           components:
             numberOfReplicas:

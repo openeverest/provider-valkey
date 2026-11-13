@@ -64,33 +64,38 @@ const (
 	TLSCertificateUserDisabled = "disabled"
 )
 
-// MonitoringParameters holds the configuration of the monitoring component.
-// The component runs the metrics exporter sidecar next to every Valkey
-// server; the parameters choose which monitoring systems scrape it.
+// MonitoringParameters holds the configuration of the monitoring component,
+// which runs the metrics exporter sidecar next to every Valkey server.
+//
+// Deprecated: the parameters have no effect. Earlier releases created a
+// PodMonitor or VMPodScrape from them; to collect metrics, list a monitoring
+// destination in spec.monitoring.destinations, or scrape the exporter
+// yourself. They are still accepted, since Instances created by earlier UIs
+// carry them.
 type MonitoringParameters struct {
-	// Metrics configures which monitoring systems scrape the exporter.
-	// If not specified, the exporter runs but nothing is created to scrape it.
+	// Deprecated: has no effect. Earlier releases created the scrape
+	// resources it lists; list a monitoring destination in
+	// spec.monitoring.destinations instead.
 	// +optional
 	Metrics *MetricsParameters `json:"metrics,omitempty"`
 }
 
-// MetricsParameters configures which monitoring systems scrape the exposed
-// metrics.
+// MetricsParameters is deprecated and has no effect.
 type MetricsParameters struct {
-	// Prometheus configures scraping by the Prometheus Operator.
+	// Deprecated: has no effect. Earlier releases created a PodMonitor for
+	// the Prometheus Operator.
 	// +optional
 	Prometheus *ScrapeParameters `json:"prometheus,omitempty"`
 
-	// VictoriaMetrics configures scraping by the VictoriaMetrics Operator.
+	// Deprecated: has no effect. Earlier releases created a VMPodScrape for
+	// the VictoriaMetrics Operator.
 	// +optional
 	VictoriaMetrics *ScrapeParameters `json:"victoriaMetrics,omitempty"`
 }
 
-// ScrapeParameters configures scraping of the exposed metrics by one
-// monitoring system.
+// ScrapeParameters is deprecated and has no effect.
 type ScrapeParameters struct {
-	// Enabled creates the monitoring system's scrape resource for the
-	// instance: a PodMonitor for Prometheus, a VMPodScrape for VictoriaMetrics.
+	// Deprecated: has no effect.
 	// +optional
 	Enabled bool `json:"enabled,omitempty"`
 }
