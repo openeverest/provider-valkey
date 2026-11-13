@@ -177,6 +177,10 @@ test-integration: ## Run integration tests (chainsaw) against a running cluster,
 test-integration-admission: ## Run admission webhook integration tests against the provider installed from the chart in provider-system.
 	. ./test/vars.sh && chainsaw test --config ./test/integration/.chainsaw.yaml ./test/integration/admission
 
+.PHONY: test-e2e-presets
+test-e2e-presets: ## Run the ClusterInstancePreset e2e suite (provider from the chart, OpenEverest controller running).
+	. ./test/vars.sh && chainsaw test --config ./test/e2e/.chainsaw.yaml ./test/e2e/presets
+
 .PHONY: load-image
 load-image: ## Import the provider image (IMG) into the k3d cluster.
 	k3d image import $(IMG) -c $(K3D_CLUSTER_NAME)

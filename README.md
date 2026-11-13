@@ -216,8 +216,10 @@ regenerate their TLS material (see below) to switch.
 
 ## Presets
 
-The chart installs `InstancePreset` resources that pre-fill common instance shapes
-(list them with `kubectl get instancepresets.core.openeverest.io`):
+The chart installs cluster-scoped `ClusterInstancePreset` resources that pre-fill common
+instance shapes in the UI's create wizard (list them with
+`kubectl get clusterinstancepresets.core.openeverest.io`). They pin the default version
+bundle (`9.0`):
 
 | Preset | Topology | Shape |
 |---|---|---|
@@ -225,8 +227,18 @@ The chart installs `InstancePreset` resources that pre-fill common instance shap
 | `valkey-prod-replication` | `replication` | Primary + 2 replicas, 2 CPU / 4Gi, 25Gi disk |
 | `valkey-prod-cluster` | `cluster` | 3 shards × (primary + 1 replica), 2 CPU / 4Gi, 25Gi disk |
 
-Customize or disable them via `presets` in
-[charts/provider-valkey/values.yaml](charts/provider-valkey/values.yaml).
+Change, add or disable them under `presets` in
+[charts/provider-valkey/values.yaml](charts/provider-valkey/values.yaml). Each entry has a
+`name` (prefixed with `provider.shortName`), `enabled`, and the Instance `spec` it
+creates. The chart sets `spec.providerRef`. Presets are cluster-scoped, so they must not
+reference namespaced objects such as Secrets. For example, to install only `valkey-dev`:
+
+```bash
+helm upgrade provider-valkey <chart> -n <namespace> \
+  --set presets[1].enabled=false --set presets[2].enabled=false
+```
+
+Users create their own namespaced `InstancePreset`s; the provider no longer ships those.
 
 ## Versions
 
@@ -329,6 +341,7 @@ code generation, and the backup/restore interfaces are documented once for all p
 | `charts/provider-valkey/` | Helm chart (`generated/` is produced by `make generate`) |
 | `config/rbac/role.yaml` | Generated `ClusterRole` — do not edit |
 | `test/integration/` | Chainsaw suites (cluster and replication) |
+| `test/e2e/` | Chainsaw suites against the chart-installed provider and the real operator |
 | `test/vars.sh` | Pinned operator and workload versions used by tests |
 | `examples/` | Example `Instance` resources |
 | `dev/` | Tilt dev environment, `.env` configuration, k3d cluster config |
@@ -344,8 +357,9 @@ code generation, and the backup/restore interfaces are documented once for all p
   The admission suite needs the provider installed from the chart as `provider-valkey` in
   `provider-system`, so `make test-integration` skips it; run it with
   `make test-integration-admission`.
-- **E2E tests** — suites that need the provider installed from its chart, with the
-  valkey-operator, and the OpenEverest controller running:
+- **E2E tests** — suites under [test/e2e/](test/e2e/) (`presets`) and the admission suite,
+  which need the provider installed from its chart, with the valkey-operator, and the
+  OpenEverest controller running:
 
   ```bash
   make k3d-cluster-up
@@ -358,6 +372,7 @@ code generation, and the backup/restore interfaces are documented once for all p
   # In the openeverest/openeverest checkout:
   make deploy-test-controller
   make test-integration-admission
+  make test-e2e-presets
   ```
 - **CI** — `.github/workflows/ci.yaml` runs lint, build, unit tests, and generated-file
   verification; `.github/workflows/integration-test.yaml` runs the integration suites;
