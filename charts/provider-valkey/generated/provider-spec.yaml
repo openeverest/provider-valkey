@@ -257,26 +257,25 @@ spec:
                   components:
                     cpu:
                       fieldParams:
-                        badge: m
-                        badgeToApi: true
                         defaultValue: 100
                         label: Exporter CPU
                         step: 50
+                        unit: m
+                        unitLabel: mCPU
                       path: spec.components.monitoring.resources.limits.cpu
-                      uiType: number
+                      uiType: quantity
                       validation:
                         int: true
                         min: 10
                         required: true
                     memory:
                       fieldParams:
-                        badge: Mi
-                        badgeToApi: true
                         defaultValue: 128
                         label: Exporter memory
                         step: 32
+                        unit: Mi
                       path: spec.components.monitoring.resources.limits.memory
-                      uiType: number
+                      uiType: quantity
                       validation:
                         int: true
                         min: 32
@@ -343,41 +342,38 @@ spec:
               components:
                 cpu:
                   fieldParams:
-                    badge: cores
                     defaultValue: 1
                     label: CPU
-                    step: 1
+                    unitLabel: CPU
                   path: spec.components.engine.resources.limits.cpu
-                  uiType: number
+                  uiType: quantity
                   validation:
                     min: 0.1
                     required: true
                 disk:
                   fieldParams:
-                    badge: Gi
-                    badgeToApi: true
                     defaultValue: 10
                     label: Disk
+                    unit: Gi
                   path: spec.components.engine.storage.size
-                  uiType: number
+                  uiType: quantity
                   validation:
                     int: true
                     min: 1
                     modes:
                       edit:
                         celExpressions:
-                          - celExpr: spec.components.engine.storage.size >= original.spec.components.engine.storage.size
+                          - celExpr: double(spec.components.engine.storage.size) >= double(original.spec.components.engine.storage.size)
                             message: Disk size cannot be decreased
                     required: true
                 memory:
                   fieldParams:
-                    badge: Gi
-                    badgeToApi: true
                     defaultValue: 2
                     label: Memory
                     step: 0.1
+                    unit: Gi
                   path: spec.components.engine.resources.limits.memory
-                  uiType: number
+                  uiType: quantity
                   validation:
                     min: 0.128
                     required: true
@@ -484,26 +480,25 @@ spec:
                   components:
                     cpu:
                       fieldParams:
-                        badge: m
-                        badgeToApi: true
                         defaultValue: 100
                         label: Exporter CPU
                         step: 50
+                        unit: m
+                        unitLabel: mCPU
                       path: spec.components.monitoring.resources.limits.cpu
-                      uiType: number
+                      uiType: quantity
                       validation:
                         int: true
                         min: 10
                         required: true
                     memory:
                       fieldParams:
-                        badge: Mi
-                        badgeToApi: true
                         defaultValue: 128
                         label: Exporter memory
                         step: 32
+                        unit: Mi
                       path: spec.components.monitoring.resources.limits.memory
-                      uiType: number
+                      uiType: quantity
                       validation:
                         int: true
                         min: 32
@@ -555,41 +550,38 @@ spec:
               components:
                 cpu:
                   fieldParams:
-                    badge: cores
                     defaultValue: 1
                     label: CPU
-                    step: 1
+                    unitLabel: CPU
                   path: spec.components.engine.resources.limits.cpu
-                  uiType: number
+                  uiType: quantity
                   validation:
                     min: 0.1
                     required: true
                 disk:
                   fieldParams:
-                    badge: Gi
-                    badgeToApi: true
                     defaultValue: 10
                     label: Disk
+                    unit: Gi
                   path: spec.components.engine.storage.size
-                  uiType: number
+                  uiType: quantity
                   validation:
                     int: true
                     min: 1
                     modes:
                       edit:
                         celExpressions:
-                          - celExpr: spec.components.engine.storage.size >= original.spec.components.engine.storage.size
+                          - celExpr: double(spec.components.engine.storage.size) >= double(original.spec.components.engine.storage.size)
                             message: Disk size cannot be decreased
                     required: true
                 memory:
                   fieldParams:
-                    badge: Gi
-                    badgeToApi: true
                     defaultValue: 2
                     label: Memory
                     step: 0.1
+                    unit: Gi
                   path: spec.components.engine.resources.limits.memory
-                  uiType: number
+                  uiType: quantity
                   validation:
                     min: 0.128
                     required: true

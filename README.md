@@ -46,7 +46,7 @@ lifecycle work is delegated to the operator.
 
 | provider-valkey | OpenEverest | valkey-operator | Kubernetes |
 |---|---|---|---|
-| `main` | `main` (after `2.0.0-dev.3`) | `0.8.0` | `1.31` – `1.33` |
+| `main` | `main` (after `2.0.0-dev.4`) | `0.8.0` | `1.31` – `1.33` |
 | `0.1.x` | `>= 2.0.0` | `0.6.0` | `1.30` – `1.33` |
 
 ## Capabilities
@@ -257,6 +257,12 @@ Source of truth: [definition/versions.yaml](definition/versions.yaml).
   [definition/](definition/) and published on the `Provider` resource
   (`kubectl get provider valkey -o yaml`). The provider rejects an Instance that does not
   match them, and the UI checks the form against them as you type.
+- **Resources in the UI:** CPU, memory and disk are `quantity` fields: you enter a number
+  and the UI writes a Kubernetes quantity. Engine CPU is in cores, fractions included
+  (`1.5` is written as `"1.5"`), engine memory and disk in Gi; the exporter sidecar's CPU is
+  in millicores and its memory in Mi. A value you leave unchanged keeps its stored form
+  (`8192Mi` is not rewritten as `8Gi`). This needs an OpenEverest release after
+  `2.0.0-dev.4`: an older UI does not know the field type.
 
 Technology-specific knobs:
 
