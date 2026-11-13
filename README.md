@@ -338,12 +338,32 @@ code generation, and the backup/restore interfaces are documented once for all p
 
 - **Unit tests** — `make test`.
 - **Integration tests** — chainsaw suites under [test/integration/](test/integration/),
-  exercising the cluster and replication lifecycles against a running cluster. The admission
-  suite needs the provider installed from the chart as `provider-valkey` in
+  exercising the cluster and replication lifecycles against a running cluster. They run the
+  provider as a local binary and stand in for the valkey-operator by patching status. The
+  OpenEverest CRDs come from the core revision pinned in `go.mod` (`make install-test-crds`).
+  The admission suite needs the provider installed from the chart as `provider-valkey` in
   `provider-system`, so `make test-integration` skips it; run it with
   `make test-integration-admission`.
+- **E2E tests** — suites that need the provider installed from its chart, with the
+  valkey-operator, and the OpenEverest controller running:
+
+  ```bash
+  make k3d-cluster-up
+  make docker-build load-image IMG=provider-valkey:ci
+  # In an openeverest/openeverest checkout:
+  make docker-build-controller
+  make load-openeverest-controller-image
+  make install-test-crds
+  make deploy-provider-e2e IMG=provider-valkey:ci
+  # In the openeverest/openeverest checkout:
+  make deploy-test-controller
+  make test-integration-admission
+  ```
 - **CI** — `.github/workflows/ci.yaml` runs lint, build, unit tests, and generated-file
-  verification; `.github/workflows/integration-test.yaml` runs the integration suites.
+  verification; `.github/workflows/integration-test.yaml` runs the integration suites;
+  `.github/workflows/e2e-test.yaml` runs the e2e suites, with the OpenEverest controller
+  built from `OPENEVEREST_BRANCH` of openeverest/openeverest (core `main` until the next
+  core release).
 
 ## Troubleshooting
 
