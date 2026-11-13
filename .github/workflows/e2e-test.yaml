@@ -1,0 +1,109 @@
+name: E2E Tests
+
+# Suites that need the provider installed from its chart (with the admission
+# webhook and the valkey-operator) and the OpenEverest controller running.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+env:
+  IMG: provider-valkey:ci
+  # The openeverest/openeverest ref the OpenEverest controller is built from.
+  # Keep it in step with the openeverest/v2 revision pinned in go.mod, whose
+  # CRDs make install-test-crds applies: main until the next core release,
+  # then that release's tag.
+  OPENEVEREST_BRANCH: main
+
+jobs:
+  test:
+    name: E2E / ${{ matrix.suite }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: admission
+            make_target: test-integration-admission
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Checkout OpenEverest
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: openeverest/openeverest
+          ref: ${{ env.OPENEVEREST_BRANCH }}
+          path: _openeverest
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+
+      - name: Install k3d
+        run: |
+          curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+
+      - name: Install chainsaw
+        run: |
+          ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+          VERSION="0.2.15"
+          curl -fsSL -o /tmp/chainsaw.tar.gz "https://github.com/kyverno/chainsaw/releases/download/v${VERSION}/chainsaw_linux_${ARCH}.tar.gz"
+          tar -xzf /tmp/chainsaw.tar.gz -C /usr/local/bin chainsaw
+          chmod +x /usr/local/bin/chainsaw
+          chainsaw version
+
+      - name: Create k3d cluster
+        run: make k3d-cluster-up
+
+      - name: Build provider image
+        run: make docker-build
+
+      - name: Import provider image into k3d
+        run: make load-image
+
+      - name: Build OpenEverest controller image
+        working-directory: _openeverest
+        run: make docker-build-controller
+
+      - name: Import OpenEverest controller image into k3d
+        run: make load-openeverest-controller-image
+
+      - name: Install CRDs
+        run: make install-test-crds
+
+      - name: Deploy provider with the valkey-operator
+        run: make deploy-provider-e2e
+
+      - name: Deploy OpenEverest controller
+        working-directory: _openeverest
+        run: make deploy-test-controller
+
+      - name: Run ${{ matrix.make_target }}
+        run: make ${{ matrix.make_target }}
+
+      - name: Print logs on failure
+        if: failure()
+        run: |
+          kubectl -n provider-system logs deploy/provider-valkey --tail=300 || true
+          kubectl -n openeverest-system logs deploy/openeverest-controller-manager --tail=300 || true
+
+      - name: Upload chainsaw report on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: chainsaw-${{ matrix.suite }}-${{ github.run_id }}
+          path: /tmp/chainsaw-report*.xml
+          retention-days: 7
+
+      - name: Cleanup
+        if: always()
+        run: make k3d-cluster-down
