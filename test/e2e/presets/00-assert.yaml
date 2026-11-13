@@ -1,0 +1,51 @@
+# The chart installs a ClusterInstancePreset per preset in its values, with
+# providerRef set from provider.name.
+apiVersion: core.openeverest.io/v1alpha1
+kind: ClusterInstancePreset
+metadata:
+  name: valkey-dev
+  labels:
+    app.kubernetes.io/component: preset
+spec:
+  providerRef:
+    name: valkey
+  version: "9.0"
+  topology:
+    type: replication
+  components:
+    engine:
+      replicas: 0
+---
+apiVersion: core.openeverest.io/v1alpha1
+kind: ClusterInstancePreset
+metadata:
+  name: valkey-prod-replication
+  labels:
+    app.kubernetes.io/component: preset
+spec:
+  providerRef:
+    name: valkey
+  version: "9.0"
+  topology:
+    type: replication
+  components:
+    engine:
+      replicas: 2
+---
+apiVersion: core.openeverest.io/v1alpha1
+kind: ClusterInstancePreset
+metadata:
+  name: valkey-prod-cluster
+  labels:
+    app.kubernetes.io/component: preset
+spec:
+  providerRef:
+    name: valkey
+  version: "9.0"
+  topology:
+    type: cluster
+    parameters:
+      numShards: 3
+  components:
+    engine:
+      replicas: 1

@@ -1,0 +1,64 @@
+---
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: presets
+spec:
+  description: |
+    The chart installs the valkey-dev, valkey-prod-replication and
+    valkey-prod-cluster ClusterInstancePresets. Every preset is admitted as
+    an Instance spec (server-side dry run, so the provider's admission webhook
+    checks it), and an Instance created from valkey-dev becomes Ready. The
+    prod presets are only dry-run: their 2 CPU nodes do not fit a CI runner.
+  catch:
+    - script:
+        content: kubectl get clusterinstancepresets -o yaml; kubectl -n $NAMESPACE get instance,valkeycluster -o yaml
+    - podLogs:
+        namespace: provider-system
+        selector: app.kubernetes.io/name=provider-valkey
+        tail: 100
+  steps:
+    - name: presets-installed
+      try:
+        - assert:
+            file: 00-assert.yaml
+
+    - name: presets-admitted
+      try:
+        # chainsaw runs scripts with /bin/sh: POSIX sh only.
+        - script:
+            content: |
+              set -eu
+              for preset in valkey-dev valkey-prod-replication valkey-prod-cluster; do
+                kubectl get clusterinstancepreset "$preset" -o json \
+                  | jq --arg p "$preset" --arg ns "$NAMESPACE" '{
+                      apiVersion: "core.openeverest.io/v1alpha1",
+                      kind: "Instance",
+                      metadata: {name: ("test-" + $p), namespace: $ns},
+                      spec: .spec
+                    }' \
+                  | kubectl apply --dry-run=server -f -
+              done
+
+    - name: create-from-preset
+      try:
+        - script:
+            content: |
+              set -eu
+              kubectl get clusterinstancepreset valkey-dev -o json \
+                | jq --arg ns "$NAMESPACE" '{
+                    apiVersion: "core.openeverest.io/v1alpha1",
+                    kind: "Instance",
+                    metadata: {
+                      name: "test-valkey-preset",
+                      namespace: $ns,
+                      annotations: {"openeverest.io/cluster-instance-preset": "valkey-dev"}
+                    },
+                    spec: .spec
+                  }' \
+                | kubectl apply -f -
+        - assert:
+            file: 10-assert.yaml
+      finally:
+        - script:
+            content: kubectl -n $NAMESPACE delete instance/test-valkey-preset --ignore-not-found --timeout=2m
