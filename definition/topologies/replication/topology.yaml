@@ -73,36 +73,33 @@ ui:
           groupType: line
           components:
             cpu:
-              uiType: number
+              uiType: quantity
               path: spec.components.engine.resources.limits.cpu
               fieldParams:
                 label: CPU
                 defaultValue: 1
-                step: 1
-                badge: cores
+                unitLabel: CPU
               validation:
                 required: true
                 min: 0.1
             memory:
-              uiType: number
+              uiType: quantity
               path: spec.components.engine.resources.limits.memory
               fieldParams:
                 label: Memory
                 defaultValue: 2
                 step: 0.1
-                badge: Gi
-                badgeToApi: true
+                unit: Gi
               validation:
                 required: true
                 min: 0.128
             disk:
-              uiType: number
+              uiType: quantity
               path: spec.components.engine.storage.size
               fieldParams:
                 label: Disk
                 defaultValue: 10
-                badge: Gi
-                badgeToApi: true
+                unit: Gi
               validation:
                 required: true
                 int: true
@@ -110,7 +107,7 @@ ui:
                 modes:
                   edit:
                     celExpressions:
-                      - celExpr: "spec.components.engine.storage.size >= original.spec.components.engine.storage.size"
+                      - celExpr: "double(spec.components.engine.storage.size) >= double(original.spec.components.engine.storage.size)"
                         message: Disk size cannot be decreased
           componentsOrder:
             - cpu
@@ -192,27 +189,26 @@ ui:
               groupType: line
               components:
                 cpu:
-                  uiType: number
+                  uiType: quantity
                   path: spec.components.monitoring.resources.limits.cpu
                   fieldParams:
                     label: Exporter CPU
                     defaultValue: 100
                     step: 50
-                    badge: m
-                    badgeToApi: true
+                    unit: m
+                    unitLabel: mCPU
                   validation:
                     required: true
                     int: true
                     min: 10
                 memory:
-                  uiType: number
+                  uiType: quantity
                   path: spec.components.monitoring.resources.limits.memory
                   fieldParams:
                     label: Exporter memory
                     defaultValue: 128
                     step: 32
-                    badge: Mi
-                    badgeToApi: true
+                    unit: Mi
                   validation:
                     required: true
                     int: true

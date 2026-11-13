@@ -3,6 +3,7 @@ module github.com/openeverest/provider-valkey
 go 1.27.1
 
 require (
+	github.com/google/cel-go v0.29.2
 	github.com/openeverest/openeverest/v2 v2.0.0-dev.2.0.20261112191540-4e359ad6400c
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.94.1
 	github.com/stretchr/testify v1.12.1
@@ -71,7 +72,6 @@ require (
 	github.com/gobuffalo/flect v1.0.3 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/google/cel-go v0.29.2 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
