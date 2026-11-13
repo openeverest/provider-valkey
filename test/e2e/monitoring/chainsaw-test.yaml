@@ -1,0 +1,84 @@
+---
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: monitoring
+spec:
+  description: |
+    Monitoring through Instance.spec.monitoring.destinations: core matches a
+    metrics class to the provider (an exporter, so binding it rolls the pods)
+    and binds an Instance that lists a destination of it. The provider runs
+    the exporter sidecar without the monitoring component, publishes its
+    endpoint in Instance.status.monitoring.sources, which serves metrics from
+    Valkey, deletes the PodMonitor earlier releases created and creates none.
+    Dropping the entry deletes the binding and stops the exporter. No
+    extension controller runs here, so the class is claimed by hand and the
+    binding is never Configured; what the provider owns is asserted.
+  catch:
+    - script:
+        content: kubectl -n $NAMESPACE get instance,valkeycluster,monitoringdestination,monitoringbinding,podmonitor -o yaml
+    - script:
+        content: kubectl get monitoringclass valkey-metrics-e2e -o yaml
+    - podLogs:
+        namespace: provider-system
+        selector: app.kubernetes.io/name=provider-valkey
+        tail: 100
+  steps:
+    - name: setup
+      try:
+        # A minimal PodMonitor CRD, only where the Prometheus Operator's is
+        # absent, to prove the provider deletes the legacy PodMonitor.
+        - script:
+            content: |
+              kubectl get crd podmonitors.monitoring.coreos.com >/dev/null 2>&1 || {
+                kubectl apply -f 00-podmonitor-crd.yaml &&
+                kubectl wait --for=condition=Established --timeout=60s crd/podmonitors.monitoring.coreos.com
+              }
+        - apply:
+            file: 00-install.yaml
+        # Stand in for the extension controller: a class is usable only once
+        # its controller has claimed it at its current generation.
+        - script:
+            content: |
+              gen=$(kubectl get monitoringclass/valkey-metrics-e2e -o jsonpath='{.metadata.generation}')
+              kubectl patch monitoringclass/valkey-metrics-e2e --subresource status --type merge \
+                -p '{"status":{"conditions":[{"type":"Accepted","status":"True","reason":"Accepted","message":"claimed by the test","observedGeneration":'"$gen"',"lastTransitionTime":"2026-01-01T00:00:00Z"}]}}'
+        - assert:
+            file: 00-assert.yaml
+        - apply:
+            file: 05-legacy-podmonitor.yaml
+
+    - name: create-instance-with-destination
+      try:
+        - apply:
+            file: 10-create-instance.yaml
+        - assert:
+            file: 10-assert.yaml
+        - error:
+            file: 10-errors.yaml
+        # The published endpoint serves Valkey's metrics: scrape it through
+        # the API server's pod proxy. redis_up is 1 only when the exporter
+        # reaches the server, over TLS and with the default user's password.
+        - script:
+            content: |
+              set -eu
+              pod=$(kubectl get pods -n $NAMESPACE \
+                -l core.openeverest.io/instance=test-valkey-monitoring,core.openeverest.io/component=engine \
+                -o jsonpath='{.items[0].metadata.name}')
+              port=$(kubectl get pod -n $NAMESPACE "$pod" \
+                -o jsonpath='{.spec.containers[*].ports[?(@.name=="metrics")].containerPort}')
+              kubectl get --raw "/api/v1/namespaces/$NAMESPACE/pods/$pod:$port/proxy/metrics" > /tmp/valkey-e2e-metrics
+              grep -q '^redis_up 1' /tmp/valkey-e2e-metrics
+              echo "scraped $(wc -l < /tmp/valkey-e2e-metrics) lines from $pod"
+
+    - name: drop-destination
+      try:
+        - patch:
+            file: 20-drop-destination.yaml
+        - assert:
+            file: 20-assert.yaml
+        - error:
+            file: 20-errors.yaml
+      finally:
+        - script:
+            content: kubectl -n $NAMESPACE delete instance/test-valkey-monitoring --ignore-not-found --timeout=2m

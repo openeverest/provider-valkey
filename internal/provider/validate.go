@@ -51,19 +51,8 @@ func (p *Provider) Validate(in controller.ValidationInput) controller.Validation
 	return controller.ValidationResult{Errors: errs}
 }
 
-// ValidateReferences checks the rules that read the cluster: the operators of
-// the monitoring systems the instance enables, the running ValkeyCluster and
-// the instance's CA key.
+// ValidateReferences checks the rules that read the cluster: the running
+// ValkeyCluster and the instance's CA key.
 func (p *Provider) ValidateReferences(c *controller.Context) (field.ErrorList, error) {
-	errs, err := validateScrapes(c)
-	if err != nil {
-		return nil, err
-	}
-
-	tlsErrs, err := validateTLSReferences(c)
-	if err != nil {
-		return nil, err
-	}
-
-	return append(errs, tlsErrs...), nil
+	return validateTLSReferences(c)
 }

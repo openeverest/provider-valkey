@@ -1,0 +1,47 @@
+# The bound class requires metrics, so the provider runs the exporter of the
+# version bundle.
+apiVersion: valkey.io/v1alpha1
+kind: ValkeyCluster
+metadata:
+  name: test-valkey-monitoring
+spec:
+  exporter:
+    enabled: true
+    image: oliver006/redis_exporter:v1.80.0
+---
+# Core creates the binding; no extension runs here, so it stays unconfigured.
+apiVersion: monitoring.openeverest.io/v1alpha1
+kind: MonitoringBinding
+metadata:
+  labels:
+    core.openeverest.io/instance: test-valkey-monitoring
+    monitoring.openeverest.io/entry: metrics
+spec:
+  destinationRef:
+    name: metrics-e2e
+  classRef:
+    name: valkey-metrics-e2e
+  executionMode: ExtensionManaged
+status:
+  (conditions[?type == 'Accepted'].status | [0]): "True"
+---
+# The provider publishes the exporter's endpoint for the extension.
+apiVersion: core.openeverest.io/v1alpha1
+kind: Instance
+metadata:
+  name: test-valkey-monitoring
+status:
+  phase: Ready
+  monitoring:
+    (destinations[?name == 'metrics'] | [0]):
+      mode: ExtensionManaged
+    sources:
+      metrics:
+        - component: engine
+          kind: valkey
+          podSelector:
+            core.openeverest.io/instance: test-valkey-monitoring
+            core.openeverest.io/component: engine
+          port: metrics
+          path: /metrics
+          scheme: http

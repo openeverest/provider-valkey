@@ -34,6 +34,8 @@ jobs:
             make_target: test-integration-admission
           - suite: presets
             make_target: test-e2e-presets
+          - suite: monitoring
+            make_target: test-e2e-monitoring
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0

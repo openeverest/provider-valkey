@@ -5,7 +5,6 @@ go 1.27.1
 require (
 	github.com/google/cel-go v0.29.2
 	github.com/openeverest/openeverest/v2 v2.0.0-dev.2.0.20261112191540-4e359ad6400c
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.94.1
 	github.com/stretchr/testify v1.12.1
 	github.com/valkey-io/valkey-operator v0.8.0
 	k8s.io/api v0.37.1
