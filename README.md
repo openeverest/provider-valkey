@@ -46,7 +46,7 @@ lifecycle work is delegated to the operator.
 
 | provider-valkey | OpenEverest | valkey-operator | Kubernetes |
 |---|---|---|---|
-| `main` | `main` (after `2.0.0-dev.3`) | `0.8.0` | `1.31` – `1.33` |
+| `main` | `main` (after `2.0.0-dev.3`) | `0.9.0` | `1.31` – `1.33` |
 | `0.1.x` | `>= 2.0.0` | `0.6.0` | `1.30` – `1.33` |
 
 ## Capabilities
@@ -136,6 +136,19 @@ affected instances before upgrading:
 ```bash
 kubectl get valkeycluster -A -o json | jq -r '.items[] | select((.spec.workloadType // "StatefulSet") == "StatefulSet" and (.metadata.name | length) > 41) | "\(.metadata.namespace)/\(.metadata.name)"'
 ```
+
+Upgrading to valkey-operator `0.9.x` rolls every Valkey pod once, one at a time, failing over
+before each primary. **An instance with no replicas and no persistent storage loses its data on
+that roll.** Apply the CRDs **before** `helm upgrade`: the provider now writes
+`spec.replicasPerShard` and `spec.acl.users` in place of the deprecated `spec.replicas` and
+`spec.users`, and the `0.8.x` CRD prunes the new fields, which leaves the clusters without
+replicas and without the password-protected `default` user. If the CRDs were applied after
+the upgrade, restart the operator Deployment so that it picks them up. With
+`operator.enabled=false`, upgrade the operator to `0.9.x` before the provider. The generated
+ACL does not change, so clients keep authenticating as `default` with the same password. A
+custom engine image must run without privilege escalation, which the operator now disallows.
+The provider rejects a new `Instance` whose name contains a dot, which `0.9.x` rejects as a
+`ValkeyCluster` name.
 
 The provider labels the Valkey pods with the OpenEverest pod labels (`core.openeverest.io/instance`,
 `core.openeverest.io/component`, `core.openeverest.io/provider`) through the `ValkeyCluster`'s
@@ -265,7 +278,7 @@ Technology-specific knobs:
   pods. Instances created before the CA key was kept cannot issue client certificates: delete
   their `<instance>-tls` Secret to regenerate the TLS material, then restart the Valkey pods.
   Tightening `clientAuth` to `required` on a running instance is supported; relaxing it from
-  `required` is rejected, because valkey-operator (as of v0.8.0) stops presenting its client
+  `required` is rejected, because valkey-operator (as of v0.9.0) stops presenting its client
   certificate before the nodes stop requiring one and loses access to the cluster.
 - **Metrics** — the `monitoring` component runs a metrics exporter sidecar next to every
   Valkey server. Its parameters choose the monitoring systems that scrape it:

@@ -7,7 +7,9 @@ metadata:
 spec:
   image: valkey/valkey:9.0.6
   shards: 3
-  replicas: 1
+  replicasPerShard: 1
+  # valkey-operator rejects the deprecated field alongside its replacement.
+  (replicas == null): true
   exporter:
     enabled: true
   scheduling:
@@ -27,11 +29,15 @@ spec:
       certificates:
         server:
           secretName: test-valkey-cluster-tls
-  users:
-    - name: default
-      enabled: true
-      permissions: "+@all ~* &*"
-      passwordSecret:
-        name: test-valkey-cluster-auth
-        keys:
-          - default
+  (users == null): true
+  acl:
+    users:
+      - name: default
+        state: Enabled
+        permissions: "+@all ~* &*"
+        password:
+          type: Secret
+          secret:
+            name: test-valkey-cluster-auth
+            keys:
+              - default

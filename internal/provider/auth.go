@@ -34,7 +34,7 @@ const (
 
 	// authSecretKeyPassword is the key under which the default user's password
 	// is stored in the auth Secret. The valkey-operator reads it via the user's
-	// passwordSecret reference.
+	// password.secret reference.
 	authSecretKeyPassword = "default"
 
 	// defaultUserACL grants the default user unrestricted access, matching

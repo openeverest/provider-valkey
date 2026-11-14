@@ -205,6 +205,21 @@ func TestValidate(t *testing.T) {
 			mutate:  engineParameters(`{"tls":{"clientAuth":"required"}}`),
 			old:     func(in *corev1alpha1.Instance) { in.Status.Phase = corev1alpha1.InstancePhaseReady },
 		},
+		{
+			name:    "name with a dot",
+			fixture: replicationFixture,
+			mutate:  func(in *corev1alpha1.Instance) { in.Name = "cache.v2" },
+			want:    []string{"metadata.name"},
+		},
+		{
+			name:    "existing instance with a dot in its name can still be updated",
+			fixture: replicationFixture,
+			mutate:  func(in *corev1alpha1.Instance) { in.Name = "cache.v2" },
+			old: func(in *corev1alpha1.Instance) {
+				in.Name = "cache.v2"
+				in.Status.Phase = corev1alpha1.InstancePhaseReady
+			},
+		},
 	}
 
 	for _, tt := range tests {
