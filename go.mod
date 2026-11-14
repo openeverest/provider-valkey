@@ -6,7 +6,7 @@ require (
 	github.com/openeverest/openeverest/v2 v2.0.0-dev.2.0.20261105181435-0223b79fa57d
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.94.1
 	github.com/stretchr/testify v1.12.1
-	github.com/valkey-io/valkey-operator v0.8.0
+	github.com/valkey-io/valkey-operator v0.9.0
 	k8s.io/api v0.37.1
 	k8s.io/apimachinery v0.37.1
 	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3

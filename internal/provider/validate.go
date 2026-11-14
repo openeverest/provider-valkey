@@ -15,9 +15,12 @@
 package provider
 
 import (
+	"strings"
+
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 
+	corev1alpha1 "github.com/openeverest/openeverest/v2/api/core/v1alpha1"
 	"github.com/openeverest/openeverest/v2/provider-runtime/controller"
 
 	"github.com/openeverest/provider-valkey/internal/common"
@@ -40,6 +43,9 @@ func (p *Provider) Validate(in controller.ValidationInput) controller.Validation
 	}
 
 	var errs field.ErrorList
+	if in.Old == nil {
+		errs = append(errs, validateNameHasNoDot(instance)...)
+	}
 	if engine.Replicas != nil && *engine.Replicas < 0 {
 		errs = append(errs, field.Invalid(enginePath.Child("replicas"), *engine.Replicas, "must not be negative"))
 	} else {
@@ -66,4 +72,16 @@ func (p *Provider) ValidateReferences(c *controller.Context) (field.ErrorList, e
 	}
 
 	return append(errs, tlsErrs...), nil
+}
+
+// validateNameHasNoDot mirrors the valkey-operator rule, from v0.9.0, that
+// rejects a new ValkeyCluster whose name contains a dot: its headless Service
+// valkey-<name> cannot carry one. Like the operator, it checks creates only,
+// so an existing instance can still be updated or deleted.
+func validateNameHasNoDot(in *corev1alpha1.Instance) field.ErrorList {
+	if !strings.Contains(in.Name, ".") {
+		return nil
+	}
+	return field.ErrorList{field.Invalid(field.NewPath("metadata", "name"), in.Name,
+		"must not contain '.': the Valkey Service names are derived from it")}
 }

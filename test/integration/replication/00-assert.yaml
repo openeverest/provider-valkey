@@ -7,7 +7,9 @@ metadata:
 spec:
   image: valkey/valkey:9.0.6
   shards: 1
-  replicas: 1
+  replicasPerShard: 1
+  # valkey-operator rejects the deprecated field alongside its replacement.
+  (replicas == null): true
   exporter:
     enabled: true
   scheduling:
@@ -20,14 +22,18 @@ spec:
       core.openeverest.io/provider: valkey
       core.openeverest.io/instance: test-valkey-replication
       core.openeverest.io/component: engine
-  users:
-    - name: default
-      enabled: true
-      permissions: "+@all ~* &*"
-      passwordSecret:
-        name: test-valkey-replication-auth
-        keys:
-          - default
+  (users == null): true
+  acl:
+    users:
+      - name: default
+        state: Enabled
+        permissions: "+@all ~* &*"
+        password:
+          type: Secret
+          secret:
+            name: test-valkey-replication-auth
+            keys:
+              - default
 ---
 # Clients connect through the primary Service. No ValkeyNode reports a role
 # yet, so it selects the operator's initial primary.

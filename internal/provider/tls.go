@@ -177,7 +177,7 @@ func validateTLS(spec *corev1alpha1.ProviderSpec, in *corev1alpha1.Instance) fie
 
 // validateTLSTransition rejects, on an update of an instance the provider has
 // created, moving off required client certificates. valkey-operator (as of
-// v0.8.0) stops presenting its own client certificate as soon as the spec no
+// v0.9.0) stops presenting its own client certificate as soon as the spec no
 // longer requires one, which locks it out of the nodes that have not rolled
 // yet and stalls the cluster. validateTLSReferences checks the same at
 // reconcile time, against the ValkeyCluster.
