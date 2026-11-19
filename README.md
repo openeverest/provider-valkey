@@ -212,6 +212,55 @@ kubectl get instance my-valkey -o jsonpath='{.status.connection}'
 The default user's generated password is included in the connection details and in the
 per-instance auth Secret.
 
+### Status
+
+The provider reports what it observes, and OpenEverest derives the `Instance` conditions from
+it the same way for every provider.
+
+| Condition | What this provider reports |
+|---|---|
+| `Available` | `True` while every shard that serves hash slots has a Valkey node that reports the primary role. The operator records each node's role on its `ValkeyNode`, asking the node itself, and clears it as soon as the node's pod is not ready. Otherwise `False`, with reason `NoPrimary`, for example between the loss of a primary and the failover to its replica, or `SlotsUnassigned` while the operator finds hash slots that no primary serves. Before the operator has assigned the slots for the first time, it is `False` while the instance is created. |
+| `Ready` | `True` once the cluster runs what the `Instance` asks for: the operator reports the `ValkeyCluster` ready, and not degraded, for its latest generation, and every `ValkeyNode` runs the cluster's image and volume size, is ready and has a volume of the requested size. Until then the message says what is being waited for, in the operator's words where it has any. |
+| `Upgrading` | `True` while the operator moves the Valkey nodes to a new image. |
+| `StorageResizing` | `True` while the volumes of the Valkey nodes grow to a new size. |
+
+The connection details Secret is written the first time the database is available, and kept
+current while a change rolls out.
+
+The `engine` component reports `desiredReplicas`, the Valkey pods it will have once the cluster runs the `Instance`'s current spec: a primary and its replicas in every shard, with one shard for `replication` and 3 for `cluster` unless `numShards` is set, and no replicas unless set. `monitoring` runs as a sidecar in those pods and is not reported.
+
+A problem makes the `Instance` not `Ready`, with the operator's reason:
+
+| Reason | Cause |
+|---|---|
+| `ServiceError`, `PodDisruptionBudgetError`, `ConfigMapError`, `TrustBundleError`, `UsersACLError`, `SystemUsersACLError`, `ValkeyNodeError`, `ValkeyNodeListError` | A step of the operator's pass over the cluster failed; the message quotes the error. |
+| `OperatorAuthenticationFailed` | A Valkey node rejects the password the operator logs in with. |
+| `NodeAddFailed`, `RebalanceFailed` | The operator could not add a node to the cluster, or move hash slots between shards. |
+| `ScaleInBlocked` | A scale-in waits for something the operator cannot fix by itself. |
+| `ACLApplyFailed`, `UsersACLUnresolved` | The users and passwords the operator manages are not in effect on every node. |
+| `ResizeFailed` | A volume cannot grow to the requested size. |
+
+A write that conflicted with another one is not a problem, because the operator retries it on
+its next pass. Pods that cannot be scheduled are reported by OpenEverest from the pods
+themselves.
+
+What the provider cannot know:
+
+- **Availability is as fresh as the operator's view of the nodes.** The operator polls the
+  roles every few seconds and follows the pods, but whether the cluster as a whole serves
+  requests (`cluster_state`) is not published.
+- **A shard added by a scale-out counts as soon as its `ValkeyNode`s exist**, so availability
+  reads `False` (`NoPrimary`) until the new primary's pod is ready, although the shard does
+  not serve any hash slots yet.
+- **Hash slots are checked on the operator's passes.** After every node of a cluster without
+  persistent storage restarted empty, availability reads `True` as soon as the nodes are
+  ready, before the operator has assigned their slots again.
+- **`Upgrading` ends once every node has the new image in its spec**, while the last pod may
+  still be restarting; the `Instance` is `Ready` only after that.
+- **Problems are reported for the latest generation only.** The operator stamps its
+  conditions with the generation it acted on, and an error from an earlier one may be fixed by
+  the change just applied.
+
 ## Topologies
 
 | Topology | Default | Description |
@@ -351,7 +400,9 @@ code generation, and the backup/restore interfaces are documented once for all p
 
 - **Unit tests** — `make test`.
 - **Integration tests** — chainsaw suites under [test/integration/](test/integration/),
-  exercising the cluster and replication lifecycles against a running cluster. The admission
+  exercising the cluster and replication lifecycles against a running cluster. The
+  valkey-operator is not deployed: the suites write the status of its `ValkeyCluster` and
+  `ValkeyNode` objects. The admission
   suite needs the provider installed from the chart as `provider-valkey` in
   `provider-system`, so `make test-integration` skips it; run it with
   `make test-integration-admission`.

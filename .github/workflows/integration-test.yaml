@@ -34,7 +34,7 @@ jobs:
         run: |
           # Install the OpenEverest CRDs, the bundled ValkeyCluster and ValkeyNode
           # CRDs, and the Provider CR. The integration tests simulate the valkey-operator by
-          # patching ValkeyCluster status, so the operator is not deployed.
+          # patching ValkeyCluster and ValkeyNode status, so the operator is not deployed.
           make install-test-crds
           make install-provider-cr
 

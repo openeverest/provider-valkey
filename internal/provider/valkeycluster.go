@@ -52,10 +52,7 @@ func buildClusterSpec(c *controller.Context) (valkeyv1alpha1.ValkeyClusterSpec, 
 	engine := c.Instance().Spec.Components[common.ComponentEngine]
 
 	spec.Shards = resolveShards(c.Instance())
-
-	if engine.Replicas != nil {
-		spec.ReplicasPerShard = *engine.Replicas
-	}
+	spec.ReplicasPerShard = replicasPerShard(c.Instance())
 
 	image, err := resolveEngineImage(c, engine)
 	if err != nil {
@@ -231,6 +228,18 @@ func resolveShards(in *corev1alpha1.Instance) int32 {
 		return cfg.NumShards
 	}
 	return defaultClusterShards
+}
+
+// replicasPerShard returns how many replicas the Instance asks for next to
+// each shard's primary: the engine's replicas, none unless set.
+func replicasPerShard(in *corev1alpha1.Instance) int32 {
+	return ptr.Deref(in.Spec.Components[common.ComponentEngine].Replicas, 0)
+}
+
+// enginePods returns how many Valkey pods the Instance asks for: a primary and
+// its replicas in every shard.
+func enginePods(in *corev1alpha1.Instance) int32 {
+	return resolveShards(in) * (1 + replicasPerShard(in))
 }
 
 // buildConnectionDetails returns the well-known connection details for the

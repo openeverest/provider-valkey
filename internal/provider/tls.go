@@ -181,8 +181,13 @@ func validateTLS(spec *corev1alpha1.ProviderSpec, in *corev1alpha1.Instance) fie
 // longer requires one, which locks it out of the nodes that have not rolled
 // yet and stalls the cluster. validateTLSReferences checks the same at
 // reconcile time, against the ValkeyCluster.
+//
+// The provider has created the ValkeyCluster once it has reconciled the
+// Instance, which its observed generation records. The phase can't tell: it
+// stays Pending until the cluster is first available, and a cluster that
+// never came up has nodes that require client certificates all the same.
 func validateTLSTransition(in, old *corev1alpha1.Instance) field.ErrorList {
-	if old == nil || old.Status.Phase == "" || old.Status.Phase == corev1alpha1.InstancePhasePending {
+	if old == nil || old.Status.ObservedGeneration < 1 {
 		return nil
 	}
 	before, after := engineTLSConfig(old), engineTLSConfig(in)

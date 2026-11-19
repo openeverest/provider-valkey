@@ -1,0 +1,16 @@
+# The ValkeyNode of the primary the valkey-operator creates for the cluster.
+# The replica would not change what the provider reports, so the test leaves
+# it out. It fills in the node's status.
+apiVersion: valkey.io/v1alpha1
+kind: ValkeyNode
+metadata:
+  name: test-valkey-mtls-0-0
+  labels:
+    core.openeverest.io/provider: valkey
+    valkey.io/cluster: test-valkey-mtls
+    valkey.io/shard-index: "0"
+    valkey.io/node-index: "0"
+spec:
+  image: valkey/valkey:9.0.6
+  persistence:
+    size: 1Gi

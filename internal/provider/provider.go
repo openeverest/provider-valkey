@@ -81,32 +81,6 @@ func (p *Provider) Sync(c *controller.Context) error {
 	return syncScrapes(c, p.scrapes)
 }
 
-// Status translates the ValkeyCluster status into the provider-runtime Status.
-func (p *Provider) Status(c *controller.Context) (controller.Status, error) {
-	l := log.FromContext(c.Context())
-	l.Info("Computing status", "name", c.Name())
-
-	vc := &valkeyv1alpha1.ValkeyCluster{}
-	if err := c.Get(vc, c.Name()); err != nil {
-		return controller.Provisioning("Waiting for ValkeyCluster"), nil
-	}
-
-	switch vc.Status.State {
-	case valkeyv1alpha1.ClusterStateReady:
-		cd, err := buildConnectionDetails(c)
-		if err != nil {
-			return controller.Provisioning("Waiting for connection details"), nil
-		}
-		return controller.ReadyWithConnectionDetails(cd), nil
-	case valkeyv1alpha1.ClusterStateFailed:
-		return controller.Failed(statusMessage(vc, "cluster failed")), nil
-	case valkeyv1alpha1.ClusterStateDegraded:
-		return controller.Provisioning(statusMessage(vc, "cluster is degraded")), nil
-	default:
-		return controller.Provisioning(statusMessage(vc, "cluster is being created")), nil
-	}
-}
-
 // Cleanup deletes the ValkeyCluster resource. Owner references normally handle
 // garbage collection, but the delete is issued explicitly to be safe.
 func (p *Provider) Cleanup(c *controller.Context) error {
@@ -115,12 +89,4 @@ func (p *Provider) Cleanup(c *controller.Context) error {
 
 	vc := &valkeyv1alpha1.ValkeyCluster{ObjectMeta: c.ObjectMeta(c.Name())}
 	return c.Delete(vc)
-}
-
-// statusMessage returns the operator's status message, or a fallback when empty.
-func statusMessage(vc *valkeyv1alpha1.ValkeyCluster, fallback string) string {
-	if vc.Status.Message != "" {
-		return vc.Status.Message
-	}
-	return fallback
 }
