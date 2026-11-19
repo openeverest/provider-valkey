@@ -1,0 +1,29 @@
+# The ValkeyNodes the valkey-operator creates for the cluster, one per Valkey
+# server: shard 0 with a primary and a replica. The test fills in their status.
+apiVersion: valkey.io/v1alpha1
+kind: ValkeyNode
+metadata:
+  name: test-valkey-replication-0-0
+  labels:
+    core.openeverest.io/provider: valkey
+    valkey.io/cluster: test-valkey-replication
+    valkey.io/shard-index: "0"
+    valkey.io/node-index: "0"
+spec:
+  image: valkey/valkey:9.0.6
+  persistence:
+    size: 10Gi
+---
+apiVersion: valkey.io/v1alpha1
+kind: ValkeyNode
+metadata:
+  name: test-valkey-replication-0-1
+  labels:
+    core.openeverest.io/provider: valkey
+    valkey.io/cluster: test-valkey-replication
+    valkey.io/shard-index: "0"
+    valkey.io/node-index: "1"
+spec:
+  image: valkey/valkey:9.0.6
+  persistence:
+    size: 10Gi

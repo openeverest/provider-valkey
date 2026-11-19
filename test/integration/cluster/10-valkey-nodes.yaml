@@ -1,0 +1,44 @@
+# The ValkeyNodes of the primaries the valkey-operator creates for the three
+# shards. The replicas would not change what the provider reports, so the test
+# leaves them out. It fills in the nodes' status.
+apiVersion: valkey.io/v1alpha1
+kind: ValkeyNode
+metadata:
+  name: test-valkey-cluster-0-0
+  labels:
+    core.openeverest.io/provider: valkey
+    valkey.io/cluster: test-valkey-cluster
+    valkey.io/shard-index: "0"
+    valkey.io/node-index: "0"
+spec:
+  image: valkey/valkey:9.0.6
+  persistence:
+    size: 10Gi
+---
+apiVersion: valkey.io/v1alpha1
+kind: ValkeyNode
+metadata:
+  name: test-valkey-cluster-1-0
+  labels:
+    core.openeverest.io/provider: valkey
+    valkey.io/cluster: test-valkey-cluster
+    valkey.io/shard-index: "1"
+    valkey.io/node-index: "0"
+spec:
+  image: valkey/valkey:9.0.6
+  persistence:
+    size: 10Gi
+---
+apiVersion: valkey.io/v1alpha1
+kind: ValkeyNode
+metadata:
+  name: test-valkey-cluster-2-0
+  labels:
+    core.openeverest.io/provider: valkey
+    valkey.io/cluster: test-valkey-cluster
+    valkey.io/shard-index: "2"
+    valkey.io/node-index: "0"
+spec:
+  image: valkey/valkey:9.0.6
+  persistence:
+    size: 10Gi

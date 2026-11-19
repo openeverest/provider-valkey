@@ -13,7 +13,7 @@ spec:
     Instance requiring them without TLS is rejected.
   catch:
     - script:
-        content: kubectl -n $NAMESPACE get instance,valkeycluster,secret -o yaml
+        content: kubectl -n $NAMESPACE get instance,valkeycluster,valkeynode,secret -o yaml
   steps:
     - name: create-instance
       try:
@@ -34,14 +34,29 @@ spec:
               openssl verify -purpose sslclient -CAfile "$dir/ca.crt" "$dir/client.crt"
               openssl x509 -in "$dir/client.crt" -noout -subject | grep -Eq 'CN ?= ?default$'
 
-    # Simulate the valkey-operator marking the cluster ready so the provider
-    # publishes the connection details.
+    # Simulate the valkey-operator marking the cluster ready, with a node that
+    # reports the primary role, so the provider publishes the connection
+    # details.
     - name: connection-details
       try:
+        - apply:
+            file: 10-valkey-nodes.yaml
         - script:
             content: |
-              kubectl patch valkeycluster/test-valkey-mtls --subresource status -n $NAMESPACE \
-                -p '{"status":{"state":"Ready","shards":1,"readyShards":1}}' --type=merge
+              set -eu
+              for node in test-valkey-mtls-0-0:primary; do
+                gen=$(kubectl -n $NAMESPACE get valkeynode/${node%:*} -o jsonpath='{.metadata.generation}')
+                kubectl -n $NAMESPACE patch valkeynode/${node%:*} --subresource status --type=merge \
+                  -p "{\"status\":{\"observedGeneration\":$gen,\"ready\":true,\"role\":\"${node#*:}\"}}"
+              done
+              gen=$(kubectl -n $NAMESPACE get valkeycluster/test-valkey-mtls -o jsonpath='{.metadata.generation}')
+              now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+              cond() {
+                printf '{"type":"%s","status":"True","reason":"%s","message":"%s","observedGeneration":%s,"lastTransitionTime":"%s"}' \
+                  "$1" "$2" "$3" "$gen" "$now"
+              }
+              kubectl -n $NAMESPACE patch valkeycluster/test-valkey-mtls --subresource status --type=merge \
+                -p "{\"status\":{\"state\":\"Ready\",\"shards\":1,\"readyShards\":1,\"conditions\":[$(cond Ready ClusterHealthy 'Cluster is healthy'),$(cond SlotsAssigned AllSlotsAssigned 'All slots assigned')]}}"
         - assert:
             file: 10-assert.yaml
         - script:

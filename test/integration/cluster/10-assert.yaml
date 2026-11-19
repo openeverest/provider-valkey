@@ -1,8 +1,12 @@
-# Once the ValkeyCluster reports Ready, the provider must move the Instance to
-# the Ready phase.
+# Once the operator reports the cluster healthy and every shard has a node that
+# reports the primary role, the Instance is ready and available.
 apiVersion: core.openeverest.io/v1alpha1
 kind: Instance
 metadata:
   name: test-valkey-cluster
 status:
-  phase: Ready
+  phase: Provisioned
+  (conditions[?type == 'Ready'].status | [0]): "True"
+  (conditions[?type == 'Available'].status | [0]): "True"
+  # Three shards of a primary and one replica.
+  (components[?name == 'engine'] | [0].desiredReplicas): 6

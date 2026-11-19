@@ -11,7 +11,7 @@ spec:
     ValkeyCluster is garbage collected on deletion.
   catch:
     - script:
-        content: kubectl -n $NAMESPACE get instance,valkeycluster -o yaml
+        content: kubectl -n $NAMESPACE get instance,valkeycluster,valkeynode -o yaml
   steps:
     - name: create-cluster
       try:
@@ -20,14 +20,30 @@ spec:
         - assert:
             file: 00-assert.yaml
 
-    # Simulate the valkey-operator marking the cluster ready so the provider can
-    # propagate a Ready phase back to the Instance.
+    # Simulate the valkey-operator: its ValkeyNodes report their role and
+    # readiness, and it reports the cluster healthy for the latest generation
+    # with every hash slot assigned. The provider reports the Instance ready
+    # and available from these.
     - name: cluster-ready
       try:
+        - apply:
+            file: 10-valkey-nodes.yaml
         - script:
             content: |
-              kubectl patch valkeycluster/test-valkey-replication --subresource status -n $NAMESPACE \
-                -p '{"status":{"state":"Ready","shards":1,"readyShards":1}}' --type=merge
+              set -eu
+              for node in test-valkey-replication-0-0:primary test-valkey-replication-0-1:replica; do
+                gen=$(kubectl -n $NAMESPACE get valkeynode/${node%:*} -o jsonpath='{.metadata.generation}')
+                kubectl -n $NAMESPACE patch valkeynode/${node%:*} --subresource status --type=merge \
+                  -p "{\"status\":{\"observedGeneration\":$gen,\"ready\":true,\"role\":\"${node#*:}\"}}"
+              done
+              gen=$(kubectl -n $NAMESPACE get valkeycluster/test-valkey-replication -o jsonpath='{.metadata.generation}')
+              now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+              cond() {
+                printf '{"type":"%s","status":"True","reason":"%s","message":"%s","observedGeneration":%s,"lastTransitionTime":"%s"}' \
+                  "$1" "$2" "$3" "$gen" "$now"
+              }
+              kubectl -n $NAMESPACE patch valkeycluster/test-valkey-replication --subresource status --type=merge \
+                -p "{\"status\":{\"state\":\"Ready\",\"shards\":1,\"readyShards\":1,\"conditions\":[$(cond Ready ClusterHealthy 'Cluster is healthy'),$(cond SlotsAssigned AllSlotsAssigned 'All slots assigned')]}}"
         - assert:
             file: 10-assert.yaml
 
