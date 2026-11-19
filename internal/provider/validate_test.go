@@ -177,7 +177,7 @@ func TestValidate(t *testing.T) {
 			mutate:  engineParameters(`{"tls":{"clientAuth":"required","certificateUser":"cn"}}`),
 			old: func(in *corev1alpha1.Instance) {
 				engineParameters(`{"tls":{"clientAuth":"required"}}`)(in)
-				in.Status.Phase = corev1alpha1.InstancePhaseReady
+				in.Status.Phase = corev1alpha1.InstancePhaseProvisioned
 			},
 		},
 		{
@@ -186,7 +186,7 @@ func TestValidate(t *testing.T) {
 			mutate:  engineParameters(`{"tls":{"clientAuth":"optional"}}`),
 			old: func(in *corev1alpha1.Instance) {
 				engineParameters(`{"tls":{"clientAuth":"required"}}`)(in)
-				in.Status.Phase = corev1alpha1.InstancePhaseReady
+				in.Status.Phase = corev1alpha1.InstancePhaseProvisioned
 			},
 			want: []string{"spec.components[engine].parameters.tls.clientAuth"},
 		},
@@ -203,7 +203,7 @@ func TestValidate(t *testing.T) {
 			name:    "running instance can start requiring client certificates",
 			fixture: replicationFixture,
 			mutate:  engineParameters(`{"tls":{"clientAuth":"required"}}`),
-			old:     func(in *corev1alpha1.Instance) { in.Status.Phase = corev1alpha1.InstancePhaseReady },
+			old:     func(in *corev1alpha1.Instance) { in.Status.Phase = corev1alpha1.InstancePhaseProvisioned },
 		},
 		{
 			name:    "name with a dot",
@@ -217,7 +217,7 @@ func TestValidate(t *testing.T) {
 			mutate:  func(in *corev1alpha1.Instance) { in.Name = "cache.v2" },
 			old: func(in *corev1alpha1.Instance) {
 				in.Name = "cache.v2"
-				in.Status.Phase = corev1alpha1.InstancePhaseReady
+				in.Status.Phase = corev1alpha1.InstancePhaseProvisioned
 			},
 		},
 	}
