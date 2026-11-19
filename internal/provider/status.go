@@ -30,6 +30,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/openeverest/provider-valkey/internal/common"
 )
 
 // Reasons explaining why clients cannot connect.
@@ -77,7 +79,7 @@ var readyErrorReasons = []string{
 func (p *Provider) Status(c *controller.Context) (controller.Status, error) {
 	vc, err := uncachedCluster(c)
 	if apierrors.IsNotFound(err) {
-		return controller.Progressing("Waiting for the ValkeyCluster object to be created"), nil
+		return withDesiredReplicas(c, controller.Progressing("Waiting for the ValkeyCluster object to be created")), nil
 	}
 	if err != nil {
 		return controller.Status{}, err
@@ -88,7 +90,7 @@ func (p *Provider) Status(c *controller.Context) (controller.Status, error) {
 		return controller.Status{}, fmt.Errorf("list ValkeyNodes of cluster %q: %w", c.Name(), err)
 	}
 
-	status := observe(vc, liveNodes(nodes.Items))
+	status := withDesiredReplicas(c, observe(vc, liveNodes(nodes.Items)))
 
 	// The connection details are reported as soon as clients can connect,
 	// not only once the cluster has converged: whoever is told the database
@@ -124,6 +126,18 @@ func uncachedCluster(c *controller.Context) (*valkeyv1alpha1.ValkeyCluster, erro
 		return nil, fmt.Errorf("decode ValkeyCluster %q: %w", c.Name(), err)
 	}
 	return vc, nil
+}
+
+// withDesiredReplicas reports how many pods each component will have once the
+// cluster runs what the Instance asks for. The count comes from the Instance,
+// with the defaults Sync applies, not from the ValkeyCluster object, which may
+// still describe an earlier spec. The monitoring component runs as a sidecar
+// in the Valkey pods and has no pods of its own.
+func withDesiredReplicas(c *controller.Context, status controller.Status) controller.Status {
+	if _, ok := c.Instance().Spec.Components[common.ComponentEngine]; ok {
+		status = status.WithDesiredReplicas(common.ComponentEngine, enginePods(c.Instance()))
+	}
+	return status
 }
 
 // liveNodes returns the ValkeyNodes that are not being deleted, sorted by

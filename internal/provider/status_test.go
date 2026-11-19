@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
@@ -495,7 +496,9 @@ func TestStatus(t *testing.T) {
 		t.Parallel()
 		got, err := New(ScrapeConfig{}).Status(statusContext(t, nil))
 		require.NoError(t, err)
-		assert.Equal(t, controller.Progressing("Waiting for the ValkeyCluster object to be created"), got)
+		want := controller.Progressing("Waiting for the ValkeyCluster object to be created").
+			WithDesiredReplicas(common.ComponentEngine, 1)
+		assert.Equal(t, want, got)
 	})
 
 	t.Run("converged publishes the connection details", func(t *testing.T) {
@@ -548,4 +551,49 @@ func TestStatus(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "build connection details")
 	})
+}
+
+func TestDesiredReplicas(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		topology string
+		params   string
+		replicas *int32
+		want     int32
+	}{
+		{name: "replication, replicas unset", topology: common.TopologyReplication, want: 1},
+		{name: "replication with two replicas", topology: common.TopologyReplication, replicas: new(int32(2)), want: 3},
+		{name: "cluster, shards unset", topology: common.TopologyCluster, replicas: new(int32(1)), want: 6},
+		{name: "cluster with five shards", topology: common.TopologyCluster, params: `{"numShards":5}`, want: 5},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			in := newTestInstance(`{"tls":{"mode":"disabled"}}`, true)
+			in.Spec.Topology.Type = tt.topology
+			if tt.params != "" {
+				in.Spec.Topology.Parameters = &runtime.RawExtension{Raw: []byte(tt.params)}
+			}
+			engine := in.Spec.Components[common.ComponentEngine]
+			engine.Replicas = tt.replicas
+			in.Spec.Components[common.ComponentEngine] = engine
+
+			// The ValkeyCluster still describes an earlier spec, which the
+			// operator has not acted on yet.
+			vc := healthyCluster(2, func(vc *valkeyv1alpha1.ValkeyCluster) { vc.Generation++ })
+			c, _ := newTestContext(t, in, interceptor.Funcs{}, vc)
+
+			got, err := New(ScrapeConfig{}).Status(c)
+			require.NoError(t, err)
+			// The monitoring component is a sidecar in the Valkey pods.
+			assert.Equal(t, []controller.ComponentReplicas{{Component: common.ComponentEngine, Desired: tt.want}}, got.DesiredReplicas)
+
+			spec, err := buildClusterSpec(c)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, spec.Shards*(1+spec.ReplicasPerShard), "Sync applies the same size")
+		})
+	}
 }
