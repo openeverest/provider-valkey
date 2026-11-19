@@ -177,6 +177,7 @@ func TestValidate(t *testing.T) {
 			mutate:  engineParameters(`{"tls":{"clientAuth":"required","certificateUser":"cn"}}`),
 			old: func(in *corev1alpha1.Instance) {
 				engineParameters(`{"tls":{"clientAuth":"required"}}`)(in)
+				in.Status.ObservedGeneration = 1
 				in.Status.Phase = corev1alpha1.InstancePhaseProvisioned
 			},
 		},
@@ -186,16 +187,31 @@ func TestValidate(t *testing.T) {
 			mutate:  engineParameters(`{"tls":{"clientAuth":"optional"}}`),
 			old: func(in *corev1alpha1.Instance) {
 				engineParameters(`{"tls":{"clientAuth":"required"}}`)(in)
+				in.Status.ObservedGeneration = 1
 				in.Status.Phase = corev1alpha1.InstancePhaseProvisioned
 			},
 			want: []string{"spec.components[engine].parameters.tls.clientAuth"},
 		},
 		{
-			name:    "pending instance can stop requiring client certificates",
+			// The provider has created the cluster, whose nodes require client
+			// certificates, although it has not been available yet.
+			name:    "created instance that has never been available cannot stop requiring client certificates",
 			fixture: replicationFixture,
 			mutate:  engineParameters(`{"tls":{"clientAuth":"optional"}}`),
 			old: func(in *corev1alpha1.Instance) {
 				engineParameters(`{"tls":{"clientAuth":"required"}}`)(in)
+				in.Status.ObservedGeneration = 1
+				in.Status.Phase = corev1alpha1.InstancePhasePending
+			},
+			want: []string{"spec.components[engine].parameters.tls.clientAuth"},
+		},
+		{
+			name:    "instance no provider has reconciled can stop requiring client certificates",
+			fixture: replicationFixture,
+			mutate:  engineParameters(`{"tls":{"clientAuth":"optional"}}`),
+			old: func(in *corev1alpha1.Instance) {
+				engineParameters(`{"tls":{"clientAuth":"required"}}`)(in)
+				in.Status.ObservedGeneration = -1
 				in.Status.Phase = corev1alpha1.InstancePhasePending
 			},
 		},
@@ -203,7 +219,10 @@ func TestValidate(t *testing.T) {
 			name:    "running instance can start requiring client certificates",
 			fixture: replicationFixture,
 			mutate:  engineParameters(`{"tls":{"clientAuth":"required"}}`),
-			old:     func(in *corev1alpha1.Instance) { in.Status.Phase = corev1alpha1.InstancePhaseProvisioned },
+			old: func(in *corev1alpha1.Instance) {
+				in.Status.ObservedGeneration = 1
+				in.Status.Phase = corev1alpha1.InstancePhaseProvisioned
+			},
 		},
 		{
 			name:    "name with a dot",
