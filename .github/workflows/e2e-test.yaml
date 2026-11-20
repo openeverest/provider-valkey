@@ -19,7 +19,7 @@ env:
   # Keep it in step with the openeverest/v2 revision pinned in go.mod, whose
   # CRDs make install-test-crds applies: main until the next core release,
   # then that release's tag.
-  OPENEVEREST_BRANCH: main
+  OPENEVEREST_BRANCH: v2.0.0-alpha.1
 
 jobs:
   test:

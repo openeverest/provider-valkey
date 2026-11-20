@@ -46,7 +46,7 @@ lifecycle work is delegated to the operator.
 
 | provider-valkey | OpenEverest | valkey-operator | Kubernetes |
 |---|---|---|---|
-| `main` | `main` (after `2.0.0-dev.4`) | `0.9.0` | `1.31` – `1.33` |
+| `0.2.x` | `2.0.0-alpha.1` | `0.9.0` | `1.31` – `1.33` |
 | `0.1.x` | `>= 2.0.0` | `0.6.0` | `1.30` – `1.33` |
 
 ## Capabilities
