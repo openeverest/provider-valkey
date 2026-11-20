@@ -57,10 +57,6 @@ manifests: controller-gen ## Generate RBAC manifests using controller-gen from k
 	} > config/rbac/role.yaml.tmp
 	@mv config/rbac/role.yaml.tmp config/rbac/role.yaml
 
-.PHONY: deepcopy
-deepcopy: controller-gen ## Generate DeepCopy methods for the provider's own API types.
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./internal/apis/..."
-
 .PHONY: helm-sync-rbac
 helm-sync-rbac: yq ## Sync generated RBAC rules into the Helm chart.
 	@echo "Syncing RBAC rules from config/rbac/role.yaml to Helm chart..."
@@ -72,18 +68,18 @@ helm-sync-rbac: yq ## Sync generated RBAC rules into the Helm chart.
 	@echo "Done."
 
 .PHONY: generate
-generate: manifests deepcopy helm-sync-rbac ## Run all code generation (RBAC + DeepCopy + Helm sync + provider spec from definition/).
+generate: manifests helm-sync-rbac ## Run all code generation (RBAC + Helm sync + provider spec from definition/).
 	go generate ./...
 	@echo "All generation complete."
 
 .PHONY: verify
 verify: ## Verify that generated files are up-to-date (for CI).
 	@$(MAKE) generate
-	@if git diff --quiet -- config/ internal/apis/ $(CHART_DIR)/generated/; then \
+	@if git diff --quiet -- config/ $(CHART_DIR)/generated/; then \
 		echo "Generated files are up-to-date."; \
 	else \
 		echo "ERROR: Generated files are out of date. Run 'make generate' and commit the changes."; \
-		git diff -- config/ internal/apis/ $(CHART_DIR)/generated/; \
+		git diff -- config/ $(CHART_DIR)/generated/; \
 		exit 1; \
 	fi
 
@@ -127,26 +123,36 @@ helm-template: helm-deps ## Render Helm chart templates locally (dry-run).
 
 ##@ Testing
 
-# Keep in sync with the openeverest/v2 revision pinned in go.mod.
-OPENEVEREST_BRANCH ?= main
+# The k3d cluster that k3d-cluster-up creates (dev/k3d_config.yaml).
+K3D_CLUSTER_NAME ?= provider-valkey-test
 
-# Keep in sync with the prometheus-operator monitoring API pinned in go.mod.
+# The OpenEverest controller image the e2e tests build from an
+# openeverest/openeverest checkout (`make docker-build-controller` there).
+OPENEVEREST_CONTROLLER_IMG ?= ghcr.io/openeverest/openeverest-controller-dev:0.0.0
+
+# Split IMG into repository and tag for the chart values.
+_IMG_REPO = $(firstword $(subst :, ,$(IMG)))
+_IMG_TAG  = $(lastword $(subst :, ,$(IMG)))
+
+# The PodMonitor and VMPodScrape CRDs the integration tests install, so they
+# can check that the provider deletes the scrape resources earlier releases
+# created.
 PROMETHEUS_OPERATOR_VERSION ?= v0.94.1
-
-# The VMPodScrape types in internal/apis/victoriametrics follow this release.
 VICTORIA_METRICS_OPERATOR_VERSION ?= v0.75.1
 
 .PHONY: install-test-crds
 install-test-crds: helm-deps ## Install the CRDs required by the integration tests.
-	kubectl apply -f https://raw.githubusercontent.com/openeverest/openeverest/$(OPENEVEREST_BRANCH)/config/crd/bases/core.openeverest.io_providers.yaml
-	kubectl apply -f https://raw.githubusercontent.com/openeverest/openeverest/$(OPENEVEREST_BRANCH)/config/crd/bases/core.openeverest.io_instances.yaml
+	# The OpenEverest CRDs of the core revision pinned in go.mod.
+	go mod download github.com/openeverest/openeverest/v2
+	kubectl apply --server-side --force-conflicts -f "$$(go list -m -f '{{.Dir}}' github.com/openeverest/openeverest/v2)/config/crd/bases"
 	# The ValkeyCluster and ValkeyNode CRDs are bundled with the valkey-operator
 	# subchart. The integration tests simulate the operator by patching status,
 	# so the operator itself is not deployed.
 	for crd in valkeyclusters valkeynodes; do \
 		tar -xzf $(CHART_DIR)/charts/valkey-operator-*.tgz -O valkey-operator/crds/valkey.io_$$crd.yaml | kubectl apply -f - || exit 1; \
 	done
-	# The provider creates PodMonitors and VMPodScrapes; only their CRDs are needed.
+	# Earlier releases created PodMonitors and VMPodScrapes, which the provider
+	# deletes; only their CRDs are needed.
 	kubectl apply --server-side -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/$(PROMETHEUS_OPERATOR_VERSION)/example/prometheus-operator-crd/monitoring.coreos.com_podmonitors.yaml
 	kubectl apply --server-side -f https://raw.githubusercontent.com/VictoriaMetrics/operator/$(VICTORIA_METRICS_OPERATOR_VERSION)/config/crd/overlay/crd.descriptionless.yaml
 
@@ -167,6 +173,32 @@ test-integration: ## Run integration tests (chainsaw) against a running cluster,
 .PHONY: test-integration-admission
 test-integration-admission: ## Run admission webhook integration tests against the provider installed from the chart in provider-system.
 	. ./test/vars.sh && chainsaw test --config ./test/integration/.chainsaw.yaml ./test/integration/admission
+
+.PHONY: test-e2e-presets
+test-e2e-presets: ## Run the ClusterInstancePreset e2e suite (provider from the chart, OpenEverest controller running).
+	. ./test/vars.sh && chainsaw test --config ./test/e2e/.chainsaw.yaml ./test/e2e/presets
+
+.PHONY: test-e2e-monitoring
+test-e2e-monitoring: ## Run the monitoring contract e2e suite (provider from the chart, OpenEverest controller running).
+	. ./test/vars.sh && chainsaw test --config ./test/e2e/.chainsaw.yaml ./test/e2e/monitoring
+
+.PHONY: load-image
+load-image: ## Import the provider image (IMG) into the k3d cluster.
+	k3d image import $(IMG) -c $(K3D_CLUSTER_NAME)
+
+.PHONY: load-openeverest-controller-image
+load-openeverest-controller-image: ## Import the OpenEverest controller image into the k3d cluster.
+	k3d image import $(OPENEVEREST_CONTROLLER_IMG) -c $(K3D_CLUSTER_NAME)
+
+.PHONY: deploy-provider-e2e
+deploy-provider-e2e: helm-deps ## Install the provider and the valkey-operator from the chart in provider-system (IMG must be imported into k3d).
+	helm upgrade --install provider-valkey $(CHART_DIR) \
+		--create-namespace \
+		--namespace provider-system \
+		--set image.repository=$(_IMG_REPO) \
+		--set image.tag=$(_IMG_TAG) \
+		--set image.pullPolicy=Never \
+		--wait --timeout 5m
 
 ##@ Local Development Cluster
 

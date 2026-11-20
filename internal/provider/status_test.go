@@ -494,7 +494,7 @@ func TestStatus(t *testing.T) {
 
 	t.Run("ValkeyCluster not created yet", func(t *testing.T) {
 		t.Parallel()
-		got, err := New(ScrapeConfig{}).Status(statusContext(t, nil))
+		got, err := New().Status(statusContext(t, nil))
 		require.NoError(t, err)
 		want := controller.Progressing("Waiting for the ValkeyCluster object to be created").
 			WithDesiredReplicas(common.ComponentEngine, 1)
@@ -504,7 +504,7 @@ func TestStatus(t *testing.T) {
 	t.Run("converged publishes the connection details", func(t *testing.T) {
 		t.Parallel()
 		c := statusContext(t, healthyCluster(1), clusterNode(0, 0, primaryRole), clusterNode(0, 1, "replica"))
-		got, err := New(ScrapeConfig{}).Status(c)
+		got, err := New().Status(c)
 		require.NoError(t, err)
 		assert.True(t, got.Converged)
 		assert.Equal(t, controller.Available, got.Available)
@@ -516,7 +516,7 @@ func TestStatus(t *testing.T) {
 		t.Parallel()
 		vc := healthyCluster(1, withCondition(condition(valkeyv1alpha1.ConditionReady, metav1.ConditionFalse, valkeyv1alpha1.ReasonUpdatingNodes, "Updating ValkeyNodes", statusTestGeneration)))
 		c := statusContext(t, vc, clusterNode(0, 0, primaryRole), clusterNode(0, 1, "replica"))
-		got, err := New(ScrapeConfig{}).Status(c)
+		got, err := New().Status(c)
 		require.NoError(t, err)
 		assert.False(t, got.Converged)
 		assert.Equal(t, controller.Available, got.Available)
@@ -536,7 +536,7 @@ func TestStatus(t *testing.T) {
 		})
 		vc := healthyCluster(1, withCondition(condition(valkeyv1alpha1.ConditionReady, metav1.ConditionFalse, valkeyv1alpha1.ReasonUpdatingNodes, "Updating ValkeyNodes", statusTestGeneration)))
 		c := statusContext(t, vc, other, deleting, clusterNode(0, 0, "replica"))
-		got, err := New(ScrapeConfig{}).Status(c)
+		got, err := New().Status(c)
 		require.NoError(t, err)
 		assert.Equal(t, controller.Unavailable, got.Available)
 		assert.Equal(t, reasonNoPrimary, got.AvailableReason)
@@ -547,7 +547,7 @@ func TestStatus(t *testing.T) {
 		t.Parallel()
 		c, _ := newTestContext(t, newTestInstance(`{"tls":{"mode":"disabled"}}`, false), interceptor.Funcs{},
 			healthyCluster(1), clusterNode(0, 0, primaryRole))
-		_, err := New(ScrapeConfig{}).Status(c)
+		_, err := New().Status(c)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "build connection details")
 	})
@@ -586,7 +586,7 @@ func TestDesiredReplicas(t *testing.T) {
 			vc := healthyCluster(2, func(vc *valkeyv1alpha1.ValkeyCluster) { vc.Generation++ })
 			c, _ := newTestContext(t, in, interceptor.Funcs{}, vc)
 
-			got, err := New(ScrapeConfig{}).Status(c)
+			got, err := New().Status(c)
 			require.NoError(t, err)
 			// The monitoring component is a sidecar in the Valkey pods.
 			assert.Equal(t, []controller.ComponentReplicas{{Component: common.ComponentEngine, Desired: tt.want}}, got.DesiredReplicas)

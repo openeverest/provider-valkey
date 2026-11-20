@@ -3,14 +3,15 @@ module github.com/openeverest/provider-valkey
 go 1.27.1
 
 require (
-	github.com/openeverest/openeverest/v2 v2.0.0-dev.2.0.20261119102452-a30ecb4b3a8f
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.94.1
+	github.com/google/cel-go v0.31.0
+	github.com/openeverest/openeverest/v2 v2.0.0-dev.2.0.20261117185355-3a639f48ff47
 	github.com/stretchr/testify v1.12.1
 	github.com/valkey-io/valkey-operator v0.9.0
 	k8s.io/api v0.37.2
 	k8s.io/apimachinery v0.37.2
 	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3
 	sigs.k8s.io/controller-runtime v0.25.2
+	sigs.k8s.io/yaml v1.6.0
 )
 
 require (
@@ -70,7 +71,6 @@ require (
 	github.com/gobuffalo/flect v1.0.3 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/google/cel-go v0.31.0 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
@@ -138,7 +138,11 @@ require (
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.4.2 // indirect
-	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 
 tool github.com/openeverest/provider-sdk
+
+// Build against the OpenEverest v2.0.0-alpha.1 release. provider-sdk at the
+// revision the generator needs requires a core pseudo-version whose dev.2 base
+// sorts above alpha.1, so a plain require would resolve to that older commit.
+replace github.com/openeverest/openeverest/v2 => github.com/openeverest/openeverest/v2 v2.0.0-alpha.1

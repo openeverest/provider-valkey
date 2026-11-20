@@ -22,8 +22,8 @@ import (
 
 	commonv1alpha1 "github.com/openeverest/openeverest/v2/api/common/v1alpha1"
 	corev1alpha1 "github.com/openeverest/openeverest/v2/api/core/v1alpha1"
+	monitoringv1alpha1 "github.com/openeverest/openeverest/v2/api/monitoring/v1alpha1"
 	"github.com/openeverest/openeverest/v2/provider-runtime/controller"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	valkeyv1alpha1 "github.com/valkey-io/valkey-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
-	vmv1beta1 "github.com/openeverest/provider-valkey/internal/apis/victoriametrics/v1beta1"
 	"github.com/openeverest/provider-valkey/internal/common"
 )
 
@@ -89,8 +88,7 @@ func newTestScheme(t *testing.T) *runtime.Scheme {
 	t.Helper()
 	scheme := runtime.NewScheme()
 	for _, add := range []func(*runtime.Scheme) error{
-		corev1.AddToScheme, corev1alpha1.AddToScheme, valkeyv1alpha1.AddToScheme, monitoringv1.AddToScheme,
-		vmv1beta1.AddToScheme,
+		corev1.AddToScheme, corev1alpha1.AddToScheme, valkeyv1alpha1.AddToScheme, monitoringv1alpha1.AddToScheme,
 	} {
 		if err := add(scheme); err != nil {
 			t.Fatal(err)
@@ -115,6 +113,12 @@ func newTestContext(t *testing.T, in *corev1alpha1.Instance, funcs interceptor.F
 	return controller.NewContext(context.Background(), cl, in, common.ProviderName), cl
 }
 
+// newFakeClient returns a fake cluster holding objs.
+func newFakeClient(t *testing.T, objs ...client.Object) client.Client {
+	t.Helper()
+	return fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(objs...).Build()
+}
+
 func getSecret(t *testing.T, cl client.Client, name string) *corev1.Secret {
 	t.Helper()
 	secret := &corev1.Secret{}
@@ -126,7 +130,7 @@ func getSecret(t *testing.T, cl client.Client, name string) *corev1.Secret {
 
 func TestSyncLabelsEnginePods(t *testing.T) {
 	c, cl := newTestContext(t, newTestInstance("", true), interceptor.Funcs{})
-	if err := New(ScrapeConfig{}).Sync(c); err != nil {
+	if err := New().Sync(c); err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
 

@@ -46,7 +46,7 @@ lifecycle work is delegated to the operator.
 
 | provider-valkey | OpenEverest | valkey-operator | Kubernetes |
 |---|---|---|---|
-| `main` | `main` (after `2.0.0-dev.3`) | `0.9.0` | `1.31` – `1.33` |
+| `0.2.x` | `2.0.0-alpha.1` | `0.9.0` | `1.31` – `1.33` |
 | `0.1.x` | `>= 2.0.0` | `0.6.0` | `1.30` – `1.33` |
 
 ## Capabilities
@@ -61,7 +61,7 @@ provider itself is covered under [Installation](#installation).
 | Vertical scaling (CPU / memory) | ✅ | Per-component `resources` |
 | Version upgrades | ✅ | Select a version bundle with `spec.version` |
 | Custom configuration | ✅ | Passthrough Valkey config via engine `parameters.config` |
-| Monitoring | ✅ | Optional metrics exporter sidecar, scraped by Prometheus (`PodMonitor`) and/or VictoriaMetrics (`VMPodScrape`) |
+| Monitoring | ✅ | Metrics through OpenEverest monitoring destinations (exporter sidecar, run on demand); see [Monitoring](#monitoring) |
 | TLS | ✅ | Self-signed CA + server certificate, on by default |
 | Mutual TLS | ✅ | Optional or required client certificates; a client certificate is issued for the default user |
 
@@ -97,9 +97,9 @@ helm install provider-valkey \
   chart and kept across upgrades; set `admission.certManager.enabled=true` to have
   cert-manager issue it, or supply one through `admission.certs`. If the provider is down,
   writes are admitted and the `Instance` reports the errors in its `Ready` condition.
-  Problems with other objects, such as a monitoring operator the `Instance` enables that is
-  not installed, are never a reason to reject it: `kubectl` prints a warning, and the
-  `Instance` reports them once created.
+  Problems with other objects, such as a missing user Secret named by `spec.userSecretRef`,
+  are never a reason to reject it: `kubectl` prints a warning, and the `Instance` reports
+  them once created.
 
 Upgrade and uninstall:
 
@@ -157,12 +157,15 @@ did not set them rolls every Valkey pod once. With replicas, the operator fails 
 rolls a primary. **An instance with no replicas and no persistent storage loses its data on that
 roll**: add a replica or back the data up before upgrading.
 
-The monitoring component no longer implies Prometheus scraping. Each monitoring system is
-switched on per instance (see [Metrics](#configuration)), and the scrape resources are named
-`<instance>-prometheus` and `<instance>-victoriametrics`. On upgrade the provider deletes the
-`<instance>-metrics` PodMonitor of earlier versions, so instances with the monitoring component
-stop being scraped until `metrics.prometheus.enabled` or `metrics.victoriaMetrics.enabled` is
-set; the exporter keeps running. The chart value `podMonitor.enabled` is gone.
+**Monitoring moved to OpenEverest monitoring destinations.** The provider no longer creates
+`PodMonitor`s or `VMPodScrape`s, and on upgrade it deletes the ones earlier releases created
+(`<instance>-metrics`, `<instance>-prometheus`, `<instance>-victoriametrics`, and the
+`VMPodScrape`s the VictoriaMetrics Operator converted from the `PodMonitor`s). To keep
+collecting metrics, list a destination on each Instance (see [Monitoring](#monitoring)). The
+`metrics.prometheus.enabled` and `metrics.victoriaMetrics.enabled` parameters of the
+`monitoring` component are deprecated and ignored, but still accepted. The chart values
+`podMonitor.labels` and `vmPodScrape.labels` are gone. Instances with the `monitoring`
+component keep running the exporter, so their pods do not roll.
 
 Uninstalling the chart does **not** delete running `Instance` resources or their data.
 
@@ -278,8 +281,10 @@ regenerate their TLS material (see below) to switch.
 
 ## Presets
 
-The chart installs `InstancePreset` resources that pre-fill common instance shapes
-(list them with `kubectl get instancepresets.core.openeverest.io`):
+The chart installs cluster-scoped `ClusterInstancePreset` resources that pre-fill common
+instance shapes in the UI's create wizard (list them with
+`kubectl get clusterinstancepresets.core.openeverest.io`). They pin the default version
+bundle (`9.0`):
 
 | Preset | Topology | Shape |
 |---|---|---|
@@ -287,8 +292,18 @@ The chart installs `InstancePreset` resources that pre-fill common instance shap
 | `valkey-prod-replication` | `replication` | Primary + 2 replicas, 2 CPU / 4Gi, 25Gi disk |
 | `valkey-prod-cluster` | `cluster` | 3 shards × (primary + 1 replica), 2 CPU / 4Gi, 25Gi disk |
 
-Customize or disable them via `presets` in
-[charts/provider-valkey/values.yaml](charts/provider-valkey/values.yaml).
+Change, add or disable them under `presets` in
+[charts/provider-valkey/values.yaml](charts/provider-valkey/values.yaml). Each entry has a
+`name` (prefixed with `provider.shortName`), `enabled`, and the Instance `spec` it
+creates. The chart sets `spec.providerRef`. Presets are cluster-scoped, so they must not
+reference namespaced objects such as Secrets. For example, to install only `valkey-dev`:
+
+```bash
+helm upgrade provider-valkey <chart> -n <namespace> \
+  --set presets[1].enabled=false --set presets[2].enabled=false
+```
+
+Users create their own namespaced `InstancePreset`s; the provider no longer ships those.
 
 ## Versions
 
@@ -307,6 +322,12 @@ Source of truth: [definition/versions.yaml](definition/versions.yaml).
   [definition/](definition/) and published on the `Provider` resource
   (`kubectl get provider valkey -o yaml`). The provider rejects an Instance that does not
   match them, and the UI checks the form against them as you type.
+- **Resources in the UI:** CPU, memory and disk are `quantity` fields: you enter a number
+  and the UI writes a Kubernetes quantity. Engine CPU is in cores, fractions included
+  (`1.5` is written as `"1.5"`), engine memory and disk in Gi; the exporter sidecar's CPU is
+  in millicores and its memory in Mi. A value you leave unchanged keeps its stored form
+  (`8192Mi` is not rewritten as `8Gi`). This needs an OpenEverest release after
+  `2.0.0-dev.4`: an older UI does not know the field type.
 
 Technology-specific knobs:
 
@@ -329,34 +350,54 @@ Technology-specific knobs:
   Tightening `clientAuth` to `required` on a running instance is supported; relaxing it from
   `required` is rejected, because valkey-operator (as of v0.9.0) stops presenting its client
   certificate before the nodes stop requiring one and loses access to the cluster.
-- **Metrics** — the `monitoring` component runs a metrics exporter sidecar next to every
-  Valkey server. Its parameters choose the monitoring systems that scrape it:
-
-  ```yaml
-  spec:
-    components:
-      monitoring:
-        type: exporter
-        parameters:
-          metrics:
-            prometheus:
-              enabled: true
-            victoriaMetrics:
-              enabled: false
-  ```
-
-  Prometheus gets a `PodMonitor` (`<instance>-prometheus`), VictoriaMetrics a `VMPodScrape`
-  (`<instance>-victoriametrics`). Both live next to the Instance and are removed with it or
-  when switched off. Series carry `core_openeverest_io_instance`, `core_openeverest_io_component`,
-  `valkey_io_shard_index` and `valkey_io_node_index`. Keep in mind:
-
-  - The matching operator must be installed; otherwise the Instance fails validation.
-  - The monitoring system must select the resource. Chart values `podMonitor.labels` and
-    `vmPodScrape.labels` label every `PodMonitor` / `VMPodScrape`, e.g. `release: <release-name>`
-    for the kube-prometheus-stack `podMonitorSelector`.
-  - The VictoriaMetrics Operator converts `PodMonitor`s into `VMPodScrape`s by default, so with
-    both systems enabled VictoriaMetrics scrapes the instance twice.
 - **Cluster shards** — set `topology.parameters.numShards` (cluster topology only, minimum 3).
+
+## Monitoring
+
+Monitoring is an OpenEverest extension. The provider declares that Valkey's metrics come from
+an exporter (the `valkey` component type, `kind: valkey`, `metrics: Exporter`) and publishes
+the exporter's endpoint in `Instance.status.monitoring.sources`; the extension behind a
+monitoring destination creates the scrape objects. To send an instance's metrics somewhere:
+
+1. Install a monitoring extension, such as
+   [monitoring-prometheus](https://github.com/openeverest/monitoring-prometheus), and check
+   that its class is accepted: `kubectl get monitoringclass`.
+2. Create a `MonitoringDestination` of that class in the instance's namespace.
+3. List it on the Instance, or add it from the UI's **Edit monitoring** dialog:
+
+   ```yaml
+   spec:
+     monitoring:
+       destinations:
+         - name: metrics
+           destinationRef:
+             name: prometheus
+   ```
+
+Core creates a `MonitoringBinding` per entry. While a bound class needs metrics, the provider
+runs the [redis_exporter](https://github.com/oliver006/redis_exporter) sidecar of the
+instance's version bundle in every Valkey pod and publishes its endpoint (port `metrics`,
+`/metrics`) once a pod serves it. Adding the sidecar, and removing it when the last such
+destination goes, rolls the Valkey pods; core reports this as the `RollingRestart` disruption
+on the class.
+
+To scrape the exporter with a Prometheus you run yourself, add the optional `monitoring`
+component instead ("Metrics exporter" in the UI). It runs the sidecar whatever the
+destinations, with the image, version and resources you give it:
+
+```yaml
+spec:
+  components:
+    monitoring:
+      type: exporter
+      resources:
+        limits:
+          cpu: 100m
+          memory: 128Mi
+```
+
+Its `metrics.prometheus.enabled` and `metrics.victoriaMetrics.enabled` parameters are
+deprecated and ignored: earlier releases created a `PodMonitor` or `VMPodScrape` from them.
 
 ## Development
 
@@ -391,6 +432,7 @@ code generation, and the backup/restore interfaces are documented once for all p
 | `charts/provider-valkey/` | Helm chart (`generated/` is produced by `make generate`) |
 | `config/rbac/role.yaml` | Generated `ClusterRole` — do not edit |
 | `test/integration/` | Chainsaw suites (cluster and replication) |
+| `test/e2e/` | Chainsaw suites against the chart-installed provider and the real operator |
 | `test/vars.sh` | Pinned operator and workload versions used by tests |
 | `examples/` | Example `Instance` resources |
 | `dev/` | Tilt dev environment, `.env` configuration, k3d cluster config |
@@ -402,12 +444,33 @@ code generation, and the backup/restore interfaces are documented once for all p
 - **Integration tests** — chainsaw suites under [test/integration/](test/integration/),
   exercising the cluster and replication lifecycles against a running cluster. The
   valkey-operator is not deployed: the suites write the status of its `ValkeyCluster` and
-  `ValkeyNode` objects. The admission
-  suite needs the provider installed from the chart as `provider-valkey` in
+  `ValkeyNode` objects. The OpenEverest CRDs come from the core revision pinned in `go.mod`
+  (`make install-test-crds`). The admission suite needs the provider installed from the chart as `provider-valkey` in
   `provider-system`, so `make test-integration` skips it; run it with
   `make test-integration-admission`.
+- **E2E tests** — suites under [test/e2e/](test/e2e/) (`presets`, `monitoring`) and the admission suite,
+  which need the provider installed from its chart, with the valkey-operator, and the
+  OpenEverest controller running:
+
+  ```bash
+  make k3d-cluster-up
+  make docker-build load-image IMG=provider-valkey:ci
+  # In an openeverest/openeverest checkout:
+  make docker-build-controller
+  make load-openeverest-controller-image
+  make install-test-crds
+  make deploy-provider-e2e IMG=provider-valkey:ci
+  # In the openeverest/openeverest checkout:
+  make deploy-test-controller
+  make test-integration-admission
+  make test-e2e-presets
+  make test-e2e-monitoring
+  ```
 - **CI** — `.github/workflows/ci.yaml` runs lint, build, unit tests, and generated-file
-  verification; `.github/workflows/integration-test.yaml` runs the integration suites.
+  verification; `.github/workflows/integration-test.yaml` runs the integration suites;
+  `.github/workflows/e2e-test.yaml` runs the e2e suites, with the OpenEverest controller
+  built from `OPENEVEREST_BRANCH` of openeverest/openeverest (core `main` until the next
+  core release).
 
 ## Troubleshooting
 

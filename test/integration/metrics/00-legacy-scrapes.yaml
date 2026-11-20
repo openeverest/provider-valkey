@@ -1,0 +1,58 @@
+# The scrape resources earlier releases created: the PodMonitor of the oldest
+# ones (-metrics), the PodMonitor and VMPodScrape of the metrics parameters
+# (-prometheus, -victoriametrics), and the VMPodScrapes the VictoriaMetrics
+# Operator converts from PodMonitors under their names.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: test-valkey-metrics-metrics
+spec:
+  selector:
+    matchLabels:
+      valkey.io/cluster: test-valkey-metrics
+  podMetricsEndpoints:
+    - port: metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: test-valkey-metrics-prometheus
+spec:
+  selector:
+    matchLabels:
+      valkey.io/cluster: test-valkey-metrics
+  podMetricsEndpoints:
+    - port: metrics
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: test-valkey-metrics-metrics
+spec:
+  selector:
+    matchLabels:
+      valkey.io/cluster: test-valkey-metrics
+  podMetricsEndpoints:
+    - port: metrics
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: test-valkey-metrics-prometheus
+spec:
+  selector:
+    matchLabels:
+      valkey.io/cluster: test-valkey-metrics
+  podMetricsEndpoints:
+    - port: metrics
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: test-valkey-metrics-victoriametrics
+spec:
+  selector:
+    matchLabels:
+      valkey.io/cluster: test-valkey-metrics
+  podMetricsEndpoints:
+    - port: metrics
