@@ -9,6 +9,11 @@ spec:
     name: valkey
   topology:
     type: replication
+  parameters:
+    tls:
+      mode: disabled
+      clientAuth: required
+      certificateUser: cn
   components:
     engine:
       type: valkey
@@ -19,8 +24,3 @@ spec:
           memory: 1Gi
       storage:
         size: 1Gi
-      parameters:
-        tls:
-          mode: disabled
-          clientAuth: required
-          certificateUser: cn

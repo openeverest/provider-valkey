@@ -149,21 +149,95 @@ ui:
                 disabled: true
         tls:
           uiType: select
-          path: spec.components.engine.parameters.tls.mode
+          path: spec.parameters.tls.mode
           fieldParams:
             label: TLS - transport encryption
-            defaultValue: enabled
+            helperText: Required serves clients, replication and the cluster bus over TLS only. Can't be changed after the instance is created.
+            defaultValue: requireTLS
             options:
-              - label: Enabled
-                value: enabled
+              - label: "Required: clients must use TLS"
+                value: requireTLS
               - label: Disabled
                 value: disabled
             modes:
               edit:
                 disabled: true
+        certificates:
+          uiType: group
+          groupType: bordered
+          label: Certificates
+          description: >-
+            Applies with TLS on. Leave empty to have the provider issue the certificate from a CA created
+            for the instance. Clients verify the server with the CA certificate the connection Secret
+            holds as ca.crt. Can't be changed after the instance is created.
+          components:
+            issuer:
+              uiType: group
+              groupType: line
+              components:
+                issuerName:
+                  uiType: text
+                  path: spec.parameters.tls.issuer.name
+                  fieldParams:
+                    label: cert-manager issuer
+                    helperText: Issuer that signs the server certificate and the default user's client certificate. Needs cert-manager.
+                    modes:
+                      edit:
+                        disabled: true
+                  validation:
+                    regex:
+                      pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
+                      message: "Must be a valid Kubernetes object name (lowercase letters, digits, '-' and '.')"
+                    celExpressions:
+                      - celExpr: "!has(spec.parameters) || !has(spec.parameters.tls) || !has(spec.parameters.tls.issuer) || !has(spec.parameters.tls.issuer.name) || spec.parameters.tls.issuer.name == '' || !has(spec.parameters.tls.certificateSecretName) || spec.parameters.tls.certificateSecretName == ''"
+                        message: Use either an issuer or a certificate secret, not both
+                      - celExpr: "!has(spec.parameters) || !has(spec.parameters.tls) || !has(spec.parameters.tls.issuer) || !has(spec.parameters.tls.issuer.name) || spec.parameters.tls.issuer.name == '' || !has(spec.parameters.tls.mode) || spec.parameters.tls.mode != 'disabled'"
+                        message: Turn TLS on to use an issuer
+                      - celExpr: "!has(spec.parameters) || !has(spec.parameters.tls) || !has(spec.parameters.tls.issuer) || !has(spec.parameters.tls.issuer.kind) || spec.parameters.tls.issuer.kind == '' || (has(spec.parameters.tls.issuer.name) && spec.parameters.tls.issuer.name != '')"
+                        message: Name the issuer
+                issuerKind:
+                  uiType: select
+                  path: spec.parameters.tls.issuer.kind
+                  fieldParams:
+                    label: Issuer kind
+                    helperText: Issuer when not set
+                    options:
+                      - label: Issuer
+                        value: Issuer
+                      - label: ClusterIssuer
+                        value: ClusterIssuer
+                    modes:
+                      edit:
+                        disabled: true
+              componentsOrder:
+                - issuerName
+                - issuerKind
+            certificateSecretName:
+              uiType: text
+              path: spec.parameters.tls.certificateSecretName
+              fieldParams:
+                label: Certificate secret
+                helperText: >-
+                  Secret with the server certificate and any intermediate CA certificates (tls.crt), its key
+                  (tls.key) and the CA certificate (ca.crt). The Valkey nodes present it to clients and to each
+                  other, so it must be valid for server and client authentication and for the instance's
+                  in-cluster names (see the provider README).
+                modes:
+                  edit:
+                    disabled: true
+              validation:
+                regex:
+                  pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
+                  message: "Must be a valid Kubernetes object name (lowercase letters, digits, '-' and '.')"
+                celExpressions:
+                  - celExpr: "!has(spec.parameters) || !has(spec.parameters.tls) || !has(spec.parameters.tls.certificateSecretName) || spec.parameters.tls.certificateSecretName == '' || !has(spec.parameters.tls.mode) || spec.parameters.tls.mode != 'disabled'"
+                    message: Turn TLS on to use a certificate secret
+          componentsOrder:
+            - issuer
+            - certificateSecretName
         clientAuth:
           uiType: select
-          path: spec.components.engine.parameters.tls.clientAuth
+          path: spec.parameters.tls.clientAuth
           fieldParams:
             label: Client certificate authentication (mTLS)
             defaultValue: optional
@@ -176,7 +250,7 @@ ui:
                 value: disabled
         certificateUser:
           uiType: select
-          path: spec.components.engine.parameters.tls.certificateUser
+          path: spec.parameters.tls.certificateUser
           fieldParams:
             label: Log in with the client certificate
             defaultValue: disabled
@@ -188,6 +262,7 @@ ui:
       componentsOrder:
         - storageClass
         - tls
+        - certificates
         - clientAuth
         - certificateUser
     monitoring:

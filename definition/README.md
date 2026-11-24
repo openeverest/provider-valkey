@@ -10,9 +10,9 @@ OpenEverest provider. Everything related to the provider's **identity**,
 
 ```
 definition/
-├── provider.yaml                    # Provider name + component→type mapping
+├── provider.yaml                    # Provider name, component→type mapping, spec.parameters schema
 ├── versions.yaml                    # Component types and their version/image catalog
-├── types.go                         # Shared types (TopologyType, GlobalConfig)
+├── types.go                         # Shared types, incl. Parameters (spec.parameters: tls)
 ├── components/
 │   └── types.go                     # Component custom spec types
 └── topologies/
@@ -25,9 +25,9 @@ definition/
 
 | File | Purpose | When to edit |
 |------|---------|--------------|
-| `provider.yaml` | Names the provider and maps logical component names to types. | When adding/removing a component. |
+| `provider.yaml` | Names the provider, maps logical component names to types, and names the type of `spec.parameters` (`parametersSchema`). | When adding/removing a component. |
 | `versions.yaml` | Lists available versions and container images per component type. | When adding operator releases. |
-| `types.go` | Shared Go types used across the provider. | When adding provider-wide types. |
+| `types.go` | Shared Go types used across the provider, including `Parameters`, the instance-wide `spec.parameters` (TLS). | When adding provider-wide types or instance parameters. |
 | `components/types.go` | Go structs for component custom specs. | When a component needs custom config. |
 | `topologies/<name>/topology.yaml` | Defines a deployment topology and its UI rendering. | When adding a topology or changing its UI. |
 | `topologies/<name>/types.go` | Go struct for topology-specific custom config. | When a topology needs custom config fields. |

@@ -27,6 +27,9 @@ package provider
 // +kubebuilder:rbac:groups="",resources=secrets;configmaps;services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
 
+// The cert-manager Certificates an issuer of spec.parameters.tls signs.
+// +kubebuilder:rbac:groups=cert-manager.io,resources=certificates,verbs=get;list;watch;create;update;patch;delete
+
 // Monitoring contract: the runtime watches the Instances' bindings and the
 // destinations and classes they reference, and reads the kube-system
 // namespace UID that identifies the cluster in the published sources.

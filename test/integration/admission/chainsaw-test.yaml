@@ -32,12 +32,12 @@ spec:
             content: kubectl apply --dry-run=server -n $NAMESPACE -f 10-invalid-instance.yaml
             check:
               ($error != null): true
-              (contains($stderr, 'spec.components[engine].parameters.tls.certificateUser')): true
+              (contains($stderr, 'spec.parameters.tls.certificateUser')): true
         - script:
             content: kubectl apply -n $NAMESPACE -f 10-invalid-instance.yaml
             check:
               ($error != null): true
-              (contains($stderr, 'spec.components[engine].parameters.tls.certificateUser')): true
+              (contains($stderr, 'spec.parameters.tls.certificateUser')): true
         - error:
             file: 10-errors.yaml
 
@@ -78,8 +78,8 @@ spec:
               kubectl apply -n $NAMESPACE -f 30-new-error.yaml
             check:
               ($error != null): true
-              (contains($stderr, 'spec.components[engine].parameters.tls.clientAuth')): true
-              (contains($stderr, 'spec.components[engine].parameters.tls.certificateUser')): false
+              (contains($stderr, 'spec.parameters.tls.clientAuth')): true
+              (contains($stderr, 'spec.parameters.tls.certificateUser')): false
         - script:
             content: kubectl apply -n $NAMESPACE -f 31-unrelated-change.yaml
         - assert:

@@ -3,6 +3,7 @@ module github.com/openeverest/provider-valkey
 go 1.27.1
 
 require (
+	github.com/cert-manager/cert-manager v1.21.3
 	github.com/google/cel-go v0.31.0
 	github.com/openeverest/openeverest/v2 v2.0.0-dev.2.0.20261117185355-3a639f48ff47
 	github.com/stretchr/testify v1.12.1
@@ -135,6 +136,7 @@ require (
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260821135717-be32def86098 // indirect
 	sigs.k8s.io/controller-tools v0.23.0 // indirect
+	sigs.k8s.io/gateway-api v1.6.0 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.4.2 // indirect
