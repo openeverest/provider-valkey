@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	corev1alpha1 "github.com/openeverest/openeverest/v2/api/core/v1alpha1"
@@ -50,6 +51,13 @@ func engineParameters(raw string) func(*corev1alpha1.Instance) {
 	})
 }
 
+// instanceParameters sets the raw spec.parameters.
+func instanceParameters(raw string) func(*corev1alpha1.Instance) {
+	return func(in *corev1alpha1.Instance) {
+		in.Spec.Parameters = &runtime.RawExtension{Raw: []byte(raw)}
+	}
+}
+
 // monitoringParameters adds the monitoring component with the raw parameters.
 func monitoringParameters(raw string) func(*corev1alpha1.Instance) {
 	return func(in *corev1alpha1.Instance) {
@@ -72,6 +80,8 @@ func TestValidate(t *testing.T) {
 		// old turns the fixture into the stored Instance of an update; nil validates a create.
 		old  func(*corev1alpha1.Instance)
 		want []string
+		// warns is whether Validate returns warnings.
+		warns bool
 	}{
 		{name: "valid replication", fixture: replicationFixture},
 		{name: "valid cluster", fixture: clusterFixture},
@@ -103,8 +113,8 @@ func TestValidate(t *testing.T) {
 		{
 			name:    "unknown client authentication mode",
 			fixture: replicationFixture,
-			mutate:  engineParameters(`{"tls":{"clientAuth":"sometimes"}}`),
-			want:    []string{"spec.components[engine].parameters.tls.clientAuth"},
+			mutate:  instanceParameters(`{"tls":{"clientAuth":"sometimes"}}`),
+			want:    []string{"spec.parameters.tls.clientAuth"},
 		},
 		{
 			name:    "missing engine",
@@ -133,39 +143,39 @@ func TestValidate(t *testing.T) {
 		{
 			name:    "optional client auth is accepted without TLS",
 			fixture: replicationFixture,
-			mutate:  engineParameters(`{"tls":{"mode":"disabled","clientAuth":"optional"}}`),
+			mutate:  instanceParameters(`{"tls":{"mode":"disabled","clientAuth":"optional"}}`),
 		},
 		{
 			name:    "required client auth needs TLS",
 			fixture: replicationFixture,
-			mutate:  engineParameters(`{"tls":{"mode":"disabled","clientAuth":"required"}}`),
-			want:    []string{"spec.components[engine].parameters.tls.clientAuth"},
+			mutate:  instanceParameters(`{"tls":{"mode":"disabled","clientAuth":"required"}}`),
+			want:    []string{"spec.parameters.tls.clientAuth"},
 		},
 		{
 			name:    "certificate user needs TLS",
 			fixture: replicationFixture,
-			mutate:  engineParameters(`{"tls":{"mode":"disabled","certificateUser":"cn"}}`),
-			want:    []string{"spec.components[engine].parameters.tls.certificateUser"},
+			mutate:  instanceParameters(`{"tls":{"mode":"disabled","certificateUser":"cn"}}`),
+			want:    []string{"spec.parameters.tls.certificateUser"},
 		},
 		{
 			name:    "certificate user is pointless with client auth disabled",
 			fixture: replicationFixture,
-			mutate:  engineParameters(`{"tls":{"clientAuth":"disabled","certificateUser":"cn"}}`),
-			want:    []string{"spec.components[engine].parameters.tls.certificateUser"},
+			mutate:  instanceParameters(`{"tls":{"clientAuth":"disabled","certificateUser":"cn"}}`),
+			want:    []string{"spec.parameters.tls.certificateUser"},
 		},
 		{
 			name:    "certificate user on the default 9.0 bundle",
 			fixture: replicationFixture,
-			mutate:  engineParameters(`{"tls":{"clientAuth":"required","certificateUser":"cn"}}`),
+			mutate:  instanceParameters(`{"tls":{"clientAuth":"required","certificateUser":"cn"}}`),
 		},
 		{
 			name:    "certificate user needs Valkey 9.0",
 			fixture: replicationFixture,
 			mutate: func(in *corev1alpha1.Instance) {
 				in.Spec.Version = "8.1"
-				engineParameters(`{"tls":{"certificateUser":"cn"}}`)(in)
+				instanceParameters(`{"tls":{"certificateUser":"cn"}}`)(in)
 			},
-			want: []string{"spec.components[engine].parameters.tls.certificateUser"},
+			want: []string{"spec.parameters.tls.certificateUser"},
 		},
 		{
 			name:    "certificate user on a custom image is left to the operator",
@@ -174,7 +184,7 @@ func TestValidate(t *testing.T) {
 				// The topologies' supportedFields do not offer image.
 				in.Spec.Topology = nil
 				in.Spec.Version = "8.1"
-				engineParameters(`{"tls":{"certificateUser":"cn"}}`)(in)
+				instanceParameters(`{"tls":{"certificateUser":"cn"}}`)(in)
 				component(common.ComponentEngine, func(c *corev1alpha1.ComponentSpec) {
 					c.Image = "registry.example/valkey:custom"
 				})(in)
@@ -183,9 +193,9 @@ func TestValidate(t *testing.T) {
 		{
 			name:    "running instance keeps requiring client certificates",
 			fixture: replicationFixture,
-			mutate:  engineParameters(`{"tls":{"clientAuth":"required","certificateUser":"cn"}}`),
+			mutate:  instanceParameters(`{"tls":{"clientAuth":"required","certificateUser":"cn"}}`),
 			old: func(in *corev1alpha1.Instance) {
-				engineParameters(`{"tls":{"clientAuth":"required"}}`)(in)
+				instanceParameters(`{"tls":{"clientAuth":"required"}}`)(in)
 				in.Status.ObservedGeneration = 1
 				in.Status.Phase = corev1alpha1.InstancePhaseProvisioned
 			},
@@ -193,33 +203,33 @@ func TestValidate(t *testing.T) {
 		{
 			name:    "running instance cannot stop requiring client certificates",
 			fixture: replicationFixture,
-			mutate:  engineParameters(`{"tls":{"clientAuth":"optional"}}`),
+			mutate:  instanceParameters(`{"tls":{"clientAuth":"optional"}}`),
 			old: func(in *corev1alpha1.Instance) {
-				engineParameters(`{"tls":{"clientAuth":"required"}}`)(in)
+				instanceParameters(`{"tls":{"clientAuth":"required"}}`)(in)
 				in.Status.ObservedGeneration = 1
 				in.Status.Phase = corev1alpha1.InstancePhaseProvisioned
 			},
-			want: []string{"spec.components[engine].parameters.tls.clientAuth"},
+			want: []string{"spec.parameters.tls.clientAuth"},
 		},
 		{
 			// The provider has created the cluster, whose nodes require client
 			// certificates, although it has not been available yet.
 			name:    "created instance that has never been available cannot stop requiring client certificates",
 			fixture: replicationFixture,
-			mutate:  engineParameters(`{"tls":{"clientAuth":"optional"}}`),
+			mutate:  instanceParameters(`{"tls":{"clientAuth":"optional"}}`),
 			old: func(in *corev1alpha1.Instance) {
-				engineParameters(`{"tls":{"clientAuth":"required"}}`)(in)
+				instanceParameters(`{"tls":{"clientAuth":"required"}}`)(in)
 				in.Status.ObservedGeneration = 1
 				in.Status.Phase = corev1alpha1.InstancePhasePending
 			},
-			want: []string{"spec.components[engine].parameters.tls.clientAuth"},
+			want: []string{"spec.parameters.tls.clientAuth"},
 		},
 		{
 			name:    "instance no provider has reconciled can stop requiring client certificates",
 			fixture: replicationFixture,
-			mutate:  engineParameters(`{"tls":{"clientAuth":"optional"}}`),
+			mutate:  instanceParameters(`{"tls":{"clientAuth":"optional"}}`),
 			old: func(in *corev1alpha1.Instance) {
-				engineParameters(`{"tls":{"clientAuth":"required"}}`)(in)
+				instanceParameters(`{"tls":{"clientAuth":"required"}}`)(in)
 				in.Status.ObservedGeneration = -1
 				in.Status.Phase = corev1alpha1.InstancePhasePending
 			},
@@ -227,11 +237,156 @@ func TestValidate(t *testing.T) {
 		{
 			name:    "running instance can start requiring client certificates",
 			fixture: replicationFixture,
-			mutate:  engineParameters(`{"tls":{"clientAuth":"required"}}`),
+			mutate:  instanceParameters(`{"tls":{"clientAuth":"required"}}`),
 			old: func(in *corev1alpha1.Instance) {
 				in.Status.ObservedGeneration = 1
 				in.Status.Phase = corev1alpha1.InstancePhaseProvisioned
 			},
+		},
+		{
+			name:    "TLS disabled at creation",
+			fixture: replicationFixture,
+			mutate:  instanceParameters(`{"tls":{"mode":"disabled"}}`),
+		},
+		{
+			name:    "TLS cannot be turned off on a created instance",
+			fixture: replicationFixture,
+			mutate:  instanceParameters(`{"tls":{"mode":"disabled"}}`),
+			old:     func(in *corev1alpha1.Instance) { in.Status.ObservedGeneration = 1 },
+			want:    []string{"spec.parameters.tls.mode"},
+		},
+		{
+			name:    "TLS cannot be turned on on a created instance",
+			fixture: replicationFixture,
+			old: func(in *corev1alpha1.Instance) {
+				instanceParameters(`{"tls":{"mode":"disabled"}}`)(in)
+				in.Status.ObservedGeneration = 1
+			},
+			want: []string{"spec.parameters.tls.mode"},
+		},
+		{
+			// Its mode is checked against the ValkeyCluster instead.
+			name:    "instance of an earlier release moves TLS to spec.parameters",
+			fixture: replicationFixture,
+			mutate:  instanceParameters(`{"tls":{"mode":"disabled"}}`),
+			old: func(in *corev1alpha1.Instance) {
+				engineParameters(`{"tls":{"mode":"disabled"}}`)(in)
+				in.Status.ObservedGeneration = 1
+			},
+		},
+		{
+			name:    "a rejected instance can turn TLS on",
+			fixture: replicationFixture,
+			old: func(in *corev1alpha1.Instance) {
+				instanceParameters(`{"tls":{"mode":"disabled","certificateUser":"cn"}}`)(in)
+				in.Status.ObservedGeneration = 1
+				in.Status.Conditions = []metav1.Condition{{
+					Type: corev1alpha1.ConditionReady, Status: metav1.ConditionFalse, Reason: corev1alpha1.ReasonValidationFailed,
+				}}
+			},
+		},
+		{
+			name:    "the certificate source cannot change on a created instance",
+			fixture: replicationFixture,
+			mutate:  instanceParameters(`{"tls":{"issuer":{"name":"company-ca","kind":"ClusterIssuer"}}}`),
+			old:     func(in *corev1alpha1.Instance) { in.Status.ObservedGeneration = 1 },
+			want:    []string{"spec.parameters.tls"},
+			warns:   true,
+		},
+		{
+			name:    "the issuer cannot change on a created instance",
+			fixture: replicationFixture,
+			mutate:  instanceParameters(`{"tls":{"issuer":{"name":"company-ca","kind":"ClusterIssuer"}}}`),
+			old: func(in *corev1alpha1.Instance) {
+				instanceParameters(`{"tls":{"issuer":{"name":"company-ca"}}}`)(in)
+				in.Status.ObservedGeneration = 1
+			},
+			want:  []string{"spec.parameters.tls"},
+			warns: true,
+		},
+		{
+			name:    "additional names can change on a created instance",
+			fixture: replicationFixture,
+			mutate:  instanceParameters(`{"tls":{"additionalNames":["cache.example.com"]}}`),
+			old:     func(in *corev1alpha1.Instance) { in.Status.ObservedGeneration = 1 },
+		},
+		{
+			name:    "issuer and additional names",
+			fixture: replicationFixture,
+			mutate: instanceParameters(
+				`{"tls":{"issuer":{"name":"company-ca","kind":"ClusterIssuer"},"additionalNames":["*.cache.example.com"]}}`),
+			warns: true,
+		},
+		{
+			name:    "issuer on Valkey 9.1, which reloads renewed certificates",
+			fixture: replicationFixture,
+			mutate: func(in *corev1alpha1.Instance) {
+				in.Spec.Version = "9.1"
+				instanceParameters(`{"tls":{"issuer":{"name":"company-ca"}}}`)(in)
+			},
+		},
+		{
+			name:    "certificate of the user on Valkey 9.0 configured to reload it",
+			fixture: replicationFixture,
+			mutate: func(in *corev1alpha1.Instance) {
+				instanceParameters(`{"tls":{"certificateSecretName":"cache-cert"}}`)(in)
+				engineParameters(`{"config":{"tls-auto-reload-interval":"60"}}`)(in)
+			},
+		},
+		{
+			name:    "certificate of the user on Valkey 9.0",
+			fixture: replicationFixture,
+			mutate:  instanceParameters(`{"tls":{"certificateSecretName":"cache-cert"}}`),
+			warns:   true,
+		},
+		{
+			name:    "both an issuer and a certificate Secret",
+			fixture: replicationFixture,
+			mutate:  instanceParameters(`{"tls":{"certificateSecretName":"cache-cert","issuer":{"name":"company-ca"}}}`),
+			want:    []string{"spec.parameters.tls.issuer"},
+			warns:   true,
+		},
+		{
+			name:    "issuer of cert-manager of an unknown kind",
+			fixture: replicationFixture,
+			mutate:  instanceParameters(`{"tls":{"issuer":{"name":"company-ca","kind":"VaultIssuer"}}}`),
+			want:    []string{"spec.parameters.tls.issuer.kind"},
+			warns:   true,
+		},
+		{
+			name:    "external issuer of any kind",
+			fixture: replicationFixture,
+			mutate: instanceParameters(
+				`{"tls":{"issuer":{"name":"company-ca","kind":"AWSPCAClusterIssuer","group":"awspca.cert-manager.io"}}}`),
+			warns: true,
+		},
+		{
+			name:    "certificate Secret named like a Secret of the instance",
+			fixture: replicationFixture,
+			mutate: func(in *corev1alpha1.Instance) {
+				instanceParameters(`{"tls":{"certificateSecretName":"` + in.Name + `-conn"}}`)(in)
+			},
+			want:  []string{"spec.parameters.tls.certificateSecretName"},
+			warns: true,
+		},
+		{
+			name:    "additional names with a certificate Secret",
+			fixture: replicationFixture,
+			mutate:  instanceParameters(`{"tls":{"certificateSecretName":"cache-cert","additionalNames":["cache.example.com"]}}`),
+			want:    []string{"spec.parameters.tls.additionalNames"},
+			warns:   true,
+		},
+		{
+			name:    "IP address as an additional name",
+			fixture: replicationFixture,
+			mutate:  instanceParameters(`{"tls":{"additionalNames":["cache.example.com","10.0.0.1"]}}`),
+			want:    []string{"spec.parameters.tls.additionalNames[1]"},
+		},
+		{
+			name:    "certificate source with TLS disabled",
+			fixture: replicationFixture,
+			mutate:  instanceParameters(`{"tls":{"mode":"disabled","issuer":{"name":"company-ca"}}}`),
+			want:    []string{"spec.parameters.tls"},
 		},
 		{
 			name:    "name with a dot",
@@ -290,6 +445,7 @@ func TestValidate(t *testing.T) {
 				got = append(got, err.Field)
 			}
 			assert.Equal(t, tt.want, got, "errors: %v", res.Errors)
+			assert.Equal(t, tt.warns, len(res.Warnings) > 0, "warnings: %v", res.Warnings)
 		})
 	}
 }

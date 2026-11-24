@@ -16,6 +16,7 @@ package provider
 
 import (
 	"context"
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"maps"
 	"slices"
 	"testing"
@@ -51,6 +52,7 @@ var testProviderSpec = corev1alpha1.ProviderSpec{
 		common.ComponentTypeValkey: {
 			DefaultVersion: "9.0.0",
 			Versions: []corev1alpha1.ComponentVersion{
+				{Version: "9.1.2", Image: "valkey/valkey:9.1.2"},
 				{Version: "9.0.0", Image: "valkey/valkey:9.0.0"},
 				{Version: "8.1.1", Image: "valkey/valkey:8.1.1"},
 			},
@@ -63,18 +65,15 @@ var testProviderSpec = corev1alpha1.ProviderSpec{
 	},
 }
 
-// newTestInstance builds an Instance whose engine carries the given raw
-// parameters (empty for none).
-func newTestInstance(engineParameters string, monitoring bool) *corev1alpha1.Instance {
+// newTestInstance builds an Instance with the given raw spec.parameters
+// (empty for none).
+func newTestInstance(parameters string, monitoring bool) *corev1alpha1.Instance {
 	engine := corev1alpha1.ComponentSpec{Type: common.ComponentTypeValkey}
-	if engineParameters != "" {
-		engine.Parameters = &runtime.RawExtension{Raw: []byte(engineParameters)}
-	}
 	components := map[string]corev1alpha1.ComponentSpec{common.ComponentEngine: engine}
 	if monitoring {
 		components[common.ComponentMonitoring] = corev1alpha1.ComponentSpec{Type: common.ComponentTypeExporter}
 	}
-	return &corev1alpha1.Instance{
+	in := &corev1alpha1.Instance{
 		ObjectMeta: metav1.ObjectMeta{Name: testInstance, Namespace: testNamespace, UID: "uid"},
 		Spec: corev1alpha1.InstanceSpec{
 			ProviderRef: commonv1alpha1.ObjectRef{Name: common.ProviderName},
@@ -82,6 +81,10 @@ func newTestInstance(engineParameters string, monitoring bool) *corev1alpha1.Ins
 			Components:  components,
 		},
 	}
+	if parameters != "" {
+		in.Spec.Parameters = &runtime.RawExtension{Raw: []byte(parameters)}
+	}
+	return in
 }
 
 func newTestScheme(t *testing.T) *runtime.Scheme {
@@ -89,6 +92,7 @@ func newTestScheme(t *testing.T) *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	for _, add := range []func(*runtime.Scheme) error{
 		corev1.AddToScheme, corev1alpha1.AddToScheme, valkeyv1alpha1.AddToScheme, monitoringv1alpha1.AddToScheme,
+		cmapi.AddToScheme,
 	} {
 		if err := add(scheme); err != nil {
 			t.Fatal(err)

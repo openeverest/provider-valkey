@@ -1,6 +1,7 @@
 package provider
 
 import (
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -29,6 +30,8 @@ func New() *Provider {
 				// Sync lists MonitoringBindings and the conformance harness's
 				// scheme has only the provider's types.
 				monitoringv1alpha1.AddToScheme,
+				// Sync applies cert-manager Certificates for an issuer.
+				cmapi.AddToScheme,
 			},
 			WatchConfigs: []controller.WatchConfig{
 				controller.WatchOwned(&valkeyv1alpha1.ValkeyCluster{}),
@@ -43,14 +46,9 @@ func (p *Provider) Sync(c *controller.Context) error {
 	l := log.FromContext(c.Context())
 	l.Info("Syncing instance", "name", c.Name())
 
-	// Provision the self-signed TLS material before the cluster references it.
-	if tlsEnabled(c) {
-		if err := ensureTLSSecret(c); err != nil {
-			return err
-		}
-		if err := ensureClientCertSecret(c); err != nil {
-			return err
-		}
+	// Provision the TLS material before the cluster references it.
+	if err := ensureTLS(c); err != nil {
+		return err
 	}
 
 	// Provision the default user's password before the cluster references it.

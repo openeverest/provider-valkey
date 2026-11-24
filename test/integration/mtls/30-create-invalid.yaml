@@ -9,11 +9,11 @@ spec:
     name: valkey
   topology:
     type: replication
+  parameters:
+    tls:
+      mode: disabled
+      clientAuth: required
   components:
     engine:
       type: valkey
       replicas: 0
-      parameters:
-        tls:
-          mode: disabled
-          clientAuth: required

@@ -146,7 +146,7 @@ func TestReplicationConnectionHost(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		tmpl := serverCertTemplate(testInstance, testNamespace)
+		tmpl := serverCertTemplate(testInstance, testNamespace, nil)
 		tmpl.DNSNames = []string{headless, "*." + headless, "localhost"}
 		certPEM, keyPEM, err := ca.issue(tmpl)
 		if err != nil {

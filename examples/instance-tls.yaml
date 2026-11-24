@@ -1,0 +1,47 @@
+# Example Instance CR for the valkey provider with certificates of your own
+# PKI (replication topology).
+#
+# Prerequisites, in addition to those of instance-replication.yaml:
+#   - cert-manager, with the issuer below (here a ClusterIssuer named
+#     company-ca), or
+#   - for certificateSecretName, a Secret with tls.crt, tls.key and ca.crt
+#     (see the README for the names the certificate must cover).
+apiVersion: core.openeverest.io/v1alpha1
+kind: Instance
+metadata:
+  name: valkey-tls
+  namespace: default
+spec:
+  providerRef:
+    name: valkey
+  # Valkey 9.1 and later reload a renewed certificate.
+  version: "9.1"
+  topology:
+    type: replication
+
+  parameters:
+    tls:
+      # requireTLS (default) or disabled. Cannot change once created.
+      mode: requireTLS
+      # cert-manager issues the server certificate, and the default user's
+      # client certificate, from this issuer. Kind defaults to Issuer, in the
+      # instance namespace; set group for an external issuer.
+      issuer:
+        name: company-ca
+        kind: ClusterIssuer
+      # Or serve the certificate of your own Secret instead of an issuer:
+      # certificateSecretName: valkey-tls-cert
+      # Extra DNS names the server certificate covers, e.g. those of a load
+      # balancer. Changing them on a running instance restarts the pods,
+      # after maintenance approval.
+      additionalNames:
+        - cache.example.com
+      # Client certificates: optional (default), required or disabled.
+      # clientAuth: required
+
+  components:
+    engine:
+      type: valkey
+      replicas: 1
+      storage:
+        size: 10Gi

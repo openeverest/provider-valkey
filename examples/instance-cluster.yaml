@@ -28,6 +28,14 @@ spec:
     parameters:
       numShards: 3
 
+  # Transport encryption (TLS) is on by default, with a CA the provider
+  # creates for the instance. Set tls.mode to disabled, when you create the
+  # instance, to turn it off; see instance-tls.yaml for certificates of
+  # cert-manager or of your own.
+  # parameters:
+  #   tls:
+  #     mode: disabled
+
   components:
     # Main Valkey engine (required)
     engine:
@@ -45,14 +53,9 @@ spec:
         size: 10Gi
         # storageClass: standard
       # Optional Valkey configuration overrides.
-      # Transport encryption (TLS) is enabled by default; the provider generates
-      # a self-signed CA and server certificate. Set tls.mode to disabled to
-      # turn it off.
       # parameters:
       #   config:
       #     maxmemory-policy: allkeys-lru
-      #   tls:
-      #     mode: disabled
 
     # Metrics exporter sidecar (optional), for a Prometheus you run yourself:
     # port "metrics", path /metrics on every Valkey pod.

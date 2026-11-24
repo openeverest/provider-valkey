@@ -77,11 +77,9 @@ spec:
               metadata:
                 name: test-valkey-mtls
               spec:
-                components:
-                  engine:
-                    parameters:
-                      tls:
-                        clientAuth: required
+                parameters:
+                  tls:
+                    clientAuth: required
         - assert:
             file: 20-assert.yaml
 
@@ -93,7 +91,7 @@ spec:
         - script:
             content: |
               kubectl -n $NAMESPACE patch instance/test-valkey-mtls --type=merge \
-                -p '{"spec":{"components":{"engine":{"parameters":{"tls":{"clientAuth":"optional"}}}}}}' || true
+                -p '{"spec":{"parameters":{"tls":{"clientAuth":"optional"}}}}' || true
         - sleep:
             duration: 5s
         - assert:

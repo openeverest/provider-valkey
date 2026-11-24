@@ -51,14 +51,16 @@ func (p *Provider) Validate(in controller.ValidationInput) controller.Validation
 	} else {
 		errs = append(errs, validateClusterName(instance, ptr.Deref(engine.Replicas, 0))...)
 	}
-	errs = append(errs, validateTLS(&in.Provider.Spec, instance)...)
+	tlsErrs, warnings := validateTLS(&in.Provider.Spec, instance)
+	errs = append(errs, tlsErrs...)
 	errs = append(errs, validateTLSTransition(instance, in.Old)...)
 
-	return controller.ValidationResult{Errors: errs}
+	return controller.ValidationResult{Errors: errs, Warnings: warnings}
 }
 
 // ValidateReferences checks the rules that read the cluster: the running
-// ValkeyCluster and the instance's CA key.
+// ValkeyCluster, the cert-manager Certificate of an issuer, the Secret of
+// certificateSecretName and the instance's CA key.
 func (p *Provider) ValidateReferences(c *controller.Context) (field.ErrorList, error) {
 	return validateTLSReferences(c)
 }
