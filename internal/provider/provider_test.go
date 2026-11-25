@@ -24,6 +24,7 @@ import (
 	commonv1alpha1 "github.com/openeverest/openeverest/v2/api/common/v1alpha1"
 	corev1alpha1 "github.com/openeverest/openeverest/v2/api/core/v1alpha1"
 	monitoringv1alpha1 "github.com/openeverest/openeverest/v2/api/monitoring/v1alpha1"
+	"github.com/openeverest/openeverest/v2/contract"
 	"github.com/openeverest/openeverest/v2/provider-runtime/controller"
 	valkeyv1alpha1 "github.com/valkey-io/valkey-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -143,7 +144,7 @@ func TestSyncLabelsEnginePods(t *testing.T) {
 		t.Fatalf("getting ValkeyCluster: %v", err)
 	}
 	want := map[string]valkeyv1alpha1.LabelValue{
-		controller.ProviderLabel:  common.ProviderName,
+		contract.ProviderLabel:    common.ProviderName,
 		controller.InstanceLabel:  testInstance,
 		controller.ComponentLabel: common.ComponentEngine,
 	}

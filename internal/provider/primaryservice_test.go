@@ -19,7 +19,7 @@ import (
 	"maps"
 	"testing"
 
-	"github.com/openeverest/openeverest/v2/provider-runtime/controller"
+	"github.com/openeverest/openeverest/v2/contract"
 	valkeyv1alpha1 "github.com/valkey-io/valkey-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -36,10 +36,10 @@ func valkeyNode(nodeIndex, role string) *valkeyv1alpha1.ValkeyNode {
 			Name:      testInstance + "-0-" + nodeIndex,
 			Namespace: testNamespace,
 			Labels: map[string]string{
-				clusterLabel:             testInstance,
-				shardLabel:               "0",
-				nodeIndexLabel:           nodeIndex,
-				controller.ProviderLabel: common.ProviderName,
+				clusterLabel:           testInstance,
+				shardLabel:             "0",
+				nodeIndexLabel:         nodeIndex,
+				contract.ProviderLabel: common.ProviderName,
 			},
 		},
 		Status: valkeyv1alpha1.ValkeyNodeStatus{Role: role},

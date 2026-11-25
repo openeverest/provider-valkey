@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/openeverest/openeverest/v2/contract"
 	"github.com/openeverest/openeverest/v2/provider-runtime/controller"
 	valkeyv1alpha1 "github.com/valkey-io/valkey-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -149,5 +150,5 @@ var valkeyNodeHandler = handler.EnqueueRequestsFromMapFunc(instanceForValkeyNode
 
 // managedValkeyNode skips ValkeyNodes of clusters this provider does not own.
 var managedValkeyNode = predicate.NewPredicateFuncs(func(obj client.Object) bool {
-	return obj.GetLabels()[controller.ProviderLabel] == common.ProviderName
+	return obj.GetLabels()[contract.ProviderLabel] == common.ProviderName
 })
