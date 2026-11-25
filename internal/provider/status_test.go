@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	corev1alpha1 "github.com/openeverest/openeverest/v2/api/core/v1alpha1"
+	"github.com/openeverest/openeverest/v2/contract"
 	"github.com/openeverest/openeverest/v2/provider-runtime/controller"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -485,7 +486,7 @@ func statusContext(t *testing.T, vc *valkeyv1alpha1.ValkeyCluster, objs ...clien
 
 func clusterNode(shard, index int, role string, changes ...func(*valkeyv1alpha1.ValkeyNode)) *valkeyv1alpha1.ValkeyNode {
 	n := shardNode(shard, index, role, changes...)
-	n.Labels[controller.ProviderLabel] = common.ProviderName
+	n.Labels[contract.ProviderLabel] = common.ProviderName
 	return &n
 }
 
