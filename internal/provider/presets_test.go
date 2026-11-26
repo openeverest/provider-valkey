@@ -91,7 +91,7 @@ func generatedProviderSpec(t *testing.T) corev1alpha1.ProviderSpec {
 // provider's default version, and every topology must have one.
 func TestChartPresetsAreValidInstances(t *testing.T) {
 	t.Parallel()
-	v := validationtest.New(t, New(), providerSpecPath)
+	v := validationtest.New(t, New(Options{}), providerSpecPath)
 	presets := chartPresets(t)
 	require.NotEmpty(t, presets)
 	spec := generatedProviderSpec(t)

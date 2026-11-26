@@ -18,11 +18,22 @@ var _ controller.ProviderInterface = (*Provider)(nil)
 // Provider implements controller.ProviderInterface for the Valkey provider.
 type Provider struct {
 	controller.BaseProvider
+
+	opts Options
+}
+
+// Options describe the cluster the provider runs on.
+type Options struct {
+	// OpenShift leaves the Valkey pods' UIDs and GIDs to the restricted-v2
+	// SCC, which rejects fixed IDs outside the namespace's range. See
+	// DetectOpenShift.
+	OpenShift bool
 }
 
 // New creates a new Provider instance.
-func New() *Provider {
+func New(opts Options) *Provider {
 	return &Provider{
+		opts: opts,
 		BaseProvider: controller.BaseProvider{
 			ProviderName: common.ProviderName,
 			SchemeFuncs: []func(*runtime.Scheme) error{
@@ -60,6 +71,7 @@ func (p *Provider) Sync(c *controller.Context) error {
 	if err != nil {
 		return err
 	}
+	applyPodSecurity(&spec, p.opts.OpenShift)
 
 	vc := &valkeyv1alpha1.ValkeyCluster{
 		ObjectMeta: c.ObjectMeta(c.Name()),

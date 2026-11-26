@@ -123,7 +123,7 @@ func TestMonitoringSources(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			c, _ := newTestContext(t, newTestInstance("", false), interceptor.Funcs{}, tt.objs...)
-			got, err := New().MonitoringSources(c)
+			got, err := New(Options{}).MonitoringSources(c)
 			require.NoError(t, err)
 			// Empty, not nil: nil would clear sources the runtime published.
 			require.NotNil(t, got)
@@ -154,7 +154,7 @@ func TestMonitoringSourcesReadErrors(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			c, _ := newTestContext(t, newTestInstance("", false), funcs, testCluster(ptr.To(true)), testNode("n0", true, true, true))
-			got, err := New().MonitoringSources(c)
+			got, err := New(Options{}).MonitoringSources(c)
 			require.ErrorIs(t, err, boom)
 			assert.Nil(t, got)
 		})

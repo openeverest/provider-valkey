@@ -71,7 +71,7 @@ func monitoringParameters(raw string) func(*corev1alpha1.Instance) {
 // schemas, supportedFields and catalog the provider publishes, then Validate.
 func TestValidate(t *testing.T) {
 	t.Parallel()
-	v := validationtest.New(t, New(), providerSpecPath)
+	v := validationtest.New(t, New(Options{}), providerSpecPath)
 
 	tests := []struct {
 		name    string
@@ -454,7 +454,7 @@ func TestValidate(t *testing.T) {
 // shard and node indexes in the names of the instance's StatefulSets.
 func TestValidateClusterNameLength(t *testing.T) {
 	t.Parallel()
-	v := validationtest.New(t, New(), providerSpecPath)
+	v := validationtest.New(t, New(Options{}), providerSpecPath)
 
 	tests := []struct {
 		name     string
