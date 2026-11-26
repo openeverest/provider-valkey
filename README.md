@@ -336,7 +336,8 @@ Source of truth: [definition/versions.yaml](definition/versions.yaml).
   host, the names of the certificates it issues and the ValkeyCluster's
   `networking.clusterDomain`. Certificates already issued by the provider's CA are not
   reissued: after changing the domain, delete the `<instance>-tls` Secret of each TLS instance
-  and restart its Valkey pods. With an `issuer`, cert-manager reissues the certificate for the
+  and restart its Valkey pods; this regenerates the instance CA too, so clients must fetch the new
+  `ca.crt`. With an `issuer`, cert-manager reissues the certificate for the
   new names; see **Renewal** under [TLS](#tls) for when the pods pick it up.
 
 Technology-specific knobs:
