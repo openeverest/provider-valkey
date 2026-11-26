@@ -51,10 +51,12 @@ spec:
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          {{- with .Values.extraEnv }}
           env:
+            - name: CLUSTER_DOMAIN
+              value: {{ .Values.clusterDomain | default "cluster.local" | quote }}
+            {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
-          {{- end }}
+            {{- end }}
           volumeMounts:
             - name: admission-cert
               mountPath: /tmp/k8s-webhook-server/serving-certs

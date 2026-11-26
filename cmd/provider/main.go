@@ -15,11 +15,19 @@ import (
 // main is the entry point for the provider.
 func main() {
 	var admission bool
+	var clusterDomain string
 	flag.BoolVar(&admission, "admission", true, "Serve the Instance admission webhook, with the serving certificate the chart mounts.")
+	flag.StringVar(&clusterDomain, "cluster-domain", envOr("CLUSTER_DOMAIN", "cluster.local"),
+		"DNS suffix of Service names in the Kubernetes cluster (kubelet --cluster-domain). Defaults to $CLUSTER_DOMAIN.")
 	flag.Parse()
 
 	l := ctrl.Log.WithName("setup")
 	ctx := ctrl.SetupSignalHandler()
+
+	if err := provider.SetClusterDomain(clusterDomain); err != nil {
+		l.Error(err, "invalid --cluster-domain")
+		os.Exit(1)
+	}
 
 	p := provider.New()
 
@@ -41,4 +49,12 @@ func main() {
 		l.Error(err, "unable to start reconciler")
 		os.Exit(1)
 	}
+}
+
+// envOr returns the value of the environment variable key, or def when unset.
+func envOr(key, def string) string {
+	if v, ok := os.LookupEnv(key); ok && v != "" {
+		return v
+	}
+	return def
 }

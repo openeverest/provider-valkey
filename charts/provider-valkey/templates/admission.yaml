@@ -24,7 +24,7 @@ spec:
   secretName: {{ include "provider-valkey.admissionSecretName" . }}
   dnsNames:
     - {{ $fullname }}.{{ .Release.Namespace }}.svc
-    - {{ $fullname }}.{{ .Release.Namespace }}.svc.cluster.local
+    - {{ $fullname }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain | default "cluster.local" }}
   issuerRef:
     kind: Issuer
     name: {{ $fullname }}-admission

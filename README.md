@@ -330,6 +330,14 @@ Source of truth: [definition/versions.yaml](definition/versions.yaml).
   in millicores and its memory in Mi. A value you leave unchanged keeps its stored form
   (`8192Mi` is not rewritten as `8Gi`). This needs an OpenEverest release after
   `2.0.0-dev.4`: an older UI does not know the field type.
+- **Cluster domain:** clusters whose kubelet runs with a `--cluster-domain` other than
+  `cluster.local` need `--set clusterDomain=<domain>` (the `CLUSTER_DOMAIN` environment
+  variable, or the provider's `--cluster-domain` flag). The provider uses it for the connection
+  host, the names of the certificates it issues and the ValkeyCluster's
+  `networking.clusterDomain`. Certificates already issued by the provider's CA are not
+  reissued: after changing the domain, delete the `<instance>-tls` Secret of each TLS instance
+  and restart its Valkey pods. With an `issuer`, cert-manager reissues the certificate for the
+  new names; see **Renewal** under [TLS](#tls) for when the pods pick it up.
 
 Technology-specific knobs:
 
@@ -372,7 +380,8 @@ created, nor can the issuer: the nodes and the clients trust the CA they started
 
 **Your own certificate.** The certificate of `certificateSecretName` must be valid for both
 server and client authentication, since the nodes also present it to each other, and must cover
-the names valkey-operator and cluster clients connect by: `valkey-<instance>.<namespace>.svc.cluster.local`
+the names valkey-operator and cluster clients connect by (shown with the default
+[cluster domain](#configuration), `cluster.local`): `valkey-<instance>.<namespace>.svc.cluster.local`
 and its subdomains (`*.valkey-<instance>.<namespace>.svc.cluster.local`, one per pod). Add
 `valkey-<instance>-primary.<namespace>.svc.cluster.local` for clients of the `replication`
 topology. With the metrics exporter, it must cover `localhost` too: redis_exporter (as of
