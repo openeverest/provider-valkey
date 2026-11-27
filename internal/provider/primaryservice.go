@@ -54,7 +54,7 @@ func primaryServiceName(instance string) string {
 }
 
 func primaryServiceFQDN(instance, namespace string) string {
-	return fmt.Sprintf("%s.%s.svc.cluster.local", primaryServiceName(instance), namespace)
+	return serviceFQDN(primaryServiceName(instance), namespace)
 }
 
 // connectionHost is the Service clients connect to: the primary Service for
@@ -62,7 +62,7 @@ func primaryServiceFQDN(instance, namespace string) string {
 // TLS instances whose certificate predates the primary Service keep the
 // headless Service, which their certificate covers.
 func connectionHost(c *controller.Context) (string, error) {
-	headless := fmt.Sprintf("%s%s.%s.svc.cluster.local", headlessServicePrefix, c.Name(), c.Namespace())
+	headless := headlessServiceFQDN(c.Name(), c.Namespace())
 	if !usesPrimaryService(c) {
 		return headless, nil
 	}

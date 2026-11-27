@@ -23,6 +23,7 @@ spec:
       core.openeverest.io/instance: test-valkey-cluster
       core.openeverest.io/component: engine
   networking:
+    clusterDomain: cluster.local
     discovery:
       preferredEndpointType: Hostname
     tls:

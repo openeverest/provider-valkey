@@ -564,7 +564,7 @@ func (ca *certAuthority) issue(tmpl *x509.Certificate) (certPEM, keyPEM []byte, 
 // headlessServiceFQDN is the name of the operator's headless Service, which
 // the operator verifies the nodes' certificates against.
 func headlessServiceFQDN(instance, namespace string) string {
-	return fmt.Sprintf("%s%s.%s.svc.cluster.local", headlessServicePrefix, instance, namespace)
+	return serviceFQDN(headlessServicePrefix+instance, namespace)
 }
 
 // serverDNSNames are the names the server certificates of the provider's CA

@@ -94,7 +94,7 @@ ca.crt: {{ index $current.data "ca.crt" }}
 {{- else }}
 {{- $service := include "provider-valkey.fullname" . }}
 {{- $dnsName := printf "%s.%s.svc" $service .Release.Namespace }}
-{{- $altNames := list $service (printf "%s.%s" $service .Release.Namespace) $dnsName (printf "%s.cluster.local" $dnsName) }}
+{{- $altNames := list $service (printf "%s.%s" $service .Release.Namespace) $dnsName (printf "%s.%s" $dnsName (.Values.clusterDomain | default "cluster.local")) }}
 {{- $ca := genCA (printf "%s-admission-ca" $service) 3650 }}
 {{- $cert := genSignedCert $dnsName nil $altNames 3650 $ca }}
 tls.crt: {{ $cert.Cert | b64enc }}

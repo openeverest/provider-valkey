@@ -118,20 +118,26 @@ func buildClusterSpec(c *controller.Context) (valkeyv1alpha1.ValkeyClusterSpec, 
 	// by ensureTLSSecret or cert-manager, or provided by the user, before Sync
 	// applies the ValkeyCluster. Pod IPs in MOVED/CLUSTER SLOTS redirects
 	// fail certificate checks, so nodes announce hostnames covered by its SANs.
+	var networking valkeyv1alpha1.NetworkingSpec
 	if tls.Mode != definition.TLSModeDisabled {
-		spec.Networking = &valkeyv1alpha1.NetworkingSpec{
-			Discovery: &valkeyv1alpha1.DiscoverySpec{
-				PreferredEndpointType: valkeyv1alpha1.PreferredEndpointTypeHostname,
-			},
-			TLS: &valkeyv1alpha1.TLSSpec{
-				Certificates: valkeyv1alpha1.TLSCertificates{
-					Server: valkeyv1alpha1.CertificateSource{
-						SecretName: serverSecretName(c.Name(), tls),
-					},
-				},
-				ClientAuth: buildClientAuth(tls),
-			},
+		networking.Discovery = &valkeyv1alpha1.DiscoverySpec{
+			PreferredEndpointType: valkeyv1alpha1.PreferredEndpointTypeHostname,
 		}
+		networking.TLS = &valkeyv1alpha1.TLSSpec{
+			Certificates: valkeyv1alpha1.TLSCertificates{
+				Server: valkeyv1alpha1.CertificateSource{
+					SecretName: serverSecretName(c.Name(), tls),
+				},
+			},
+			ClientAuth: buildClientAuth(tls),
+		}
+	}
+	// The operator builds those hostnames and the TLS server name it dials
+	// with under the cluster domain. On the operator's default domain, plain
+	// instances keep the spec of releases before the setting.
+	if networking != (valkeyv1alpha1.NetworkingSpec{}) || clusterDomain != valkeyv1alpha1.DefaultClusterDomain {
+		networking.ClusterDomain = clusterDomain
+		spec.Networking = &networking
 	}
 
 	return spec, nil

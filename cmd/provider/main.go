@@ -16,13 +16,21 @@ import (
 // main is the entry point for the provider.
 func main() {
 	var admission bool
+	var clusterDomain string
 	flag.BoolVar(&admission, "admission", true, "Serve the Instance admission webhook, with the serving certificate the chart mounts.")
+	flag.StringVar(&clusterDomain, "cluster-domain", envOr("CLUSTER_DOMAIN", "cluster.local"),
+		"DNS suffix of Service names in the Kubernetes cluster (kubelet --cluster-domain). Defaults to $CLUSTER_DOMAIN.")
 	flag.Parse()
 
 	l := ctrl.Log.WithName("setup")
 	ctx := ctrl.SetupSignalHandler()
 
 	// reconciler.New installs the logger, so failures before it go to stderr.
+	if err := provider.SetClusterDomain(clusterDomain); err != nil {
+		fmt.Fprintf(os.Stderr, "invalid --cluster-domain: %v\n", err)
+		os.Exit(1)
+	}
+
 	cfg, err := ctrl.GetConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "unable to load kubeconfig: %v\n", err)
@@ -55,4 +63,12 @@ func main() {
 		l.Error(err, "unable to start reconciler")
 		os.Exit(1)
 	}
+}
+
+// envOr returns the value of the environment variable key, or def when unset.
+func envOr(key, def string) string {
+	if v, ok := os.LookupEnv(key); ok && v != "" {
+		return v
+	}
+	return def
 }
