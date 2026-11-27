@@ -134,7 +134,7 @@ func getSecret(t *testing.T, cl client.Client, name string) *corev1.Secret {
 
 func TestSyncLabelsEnginePods(t *testing.T) {
 	c, cl := newTestContext(t, newTestInstance("", true), interceptor.Funcs{})
-	if err := New().Sync(c); err != nil {
+	if err := New(Options{}).Sync(c); err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
 
