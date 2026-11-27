@@ -2,8 +2,8 @@ apiVersion: v2
 name: provider-valkey
 description: A Helm chart for deploying the OpenEverest provider-valkey provider
 type: application
-version: 0.2.0
-appVersion: "0.2.0"
+version: 0.2.1
+appVersion: "0.2.1"
 keywords:
   - openeverest
   - provider

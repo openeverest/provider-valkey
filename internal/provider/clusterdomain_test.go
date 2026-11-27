@@ -94,7 +94,7 @@ func TestCustomClusterDomain(t *testing.T) {
 
 	t.Run("TLS", func(t *testing.T) {
 		c, cl := newTestContext(t, newTestInstance("", false), interceptor.Funcs{})
-		if err := New().Sync(c); err != nil {
+		if err := New(Options{}).Sync(c); err != nil {
 			t.Fatalf("Sync: %v", err)
 		}
 
@@ -131,7 +131,7 @@ func TestCustomClusterDomain(t *testing.T) {
 
 	t.Run("TLS disabled", func(t *testing.T) {
 		c, _ := newTestContext(t, newTestInstance(`{"tls":{"mode":"disabled"}}`, false), interceptor.Funcs{})
-		if err := New().Sync(c); err != nil {
+		if err := New(Options{}).Sync(c); err != nil {
 			t.Fatalf("Sync: %v", err)
 		}
 		spec, err := buildClusterSpec(c)

@@ -309,7 +309,7 @@ func TestValidateTLSReferences(t *testing.T) {
 func TestSyncIssuesClientCertificate(t *testing.T) {
 	in := newTestInstance(`{"tls":{"clientAuth":"required","certificateUser":"cn"}}`, false)
 	c, cl := newTestContext(t, in, interceptor.Funcs{})
-	p := New()
+	p := New(Options{})
 
 	if err := p.Sync(c); err != nil {
 		t.Fatalf("Sync: %v", err)
@@ -356,7 +356,7 @@ func TestConnectionDetailsClientCertificate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c, _ := newTestContext(t, newTestInstance(tt.parameters, false), interceptor.Funcs{})
-			if err := New().Sync(c); err != nil {
+			if err := New(Options{}).Sync(c); err != nil {
 				t.Fatalf("Sync: %v", err)
 			}
 
@@ -456,7 +456,7 @@ func TestSyncIssuerCertificates(t *testing.T) {
 			engine.Version = tt.version
 			in.Spec.Components["engine"] = engine
 			c, cl := newTestContext(t, in, interceptor.Funcs{})
-			p := New()
+			p := New(Options{})
 
 			if err := p.Sync(c); !controller.IsWaitError(err) {
 				t.Fatalf("Sync before the certificate is issued = %v, want a wait", err)
@@ -542,7 +542,7 @@ func TestSyncIssuerCertificates(t *testing.T) {
 
 func TestSyncCertificateSecretOfUser(t *testing.T) {
 	c, cl := newTestContext(t, newTestInstance(`{"tls":{"certificateSecretName":"cache-cert"}}`, false), interceptor.Funcs{})
-	p := New()
+	p := New(Options{})
 
 	if err := p.Sync(c); !controller.IsWaitError(err) {
 		t.Fatalf("Sync before the Secret exists = %v, want a wait", err)
@@ -569,7 +569,7 @@ func TestSyncManagedAdditionalNames(t *testing.T) {
 
 	t.Run("new instance", func(t *testing.T) {
 		c, cl := newTestContext(t, newTestInstance(parameters, false), interceptor.Funcs{})
-		if err := New().Sync(c); err != nil {
+		if err := New(Options{}).Sync(c); err != nil {
 			t.Fatalf("Sync: %v", err)
 		}
 		if err := parseCert(t, getSecret(t, cl, tlsSecretName(testInstance)).Data[tlsSecretKeyCert]).VerifyHostname("cache.example.com"); err != nil {
@@ -583,7 +583,7 @@ func TestSyncManagedAdditionalNames(t *testing.T) {
 	t.Run("running instance waits for maintenance approval", func(t *testing.T) {
 		in := newTestInstance("", false)
 		c, cl := newTestContext(t, in, interceptor.Funcs{})
-		if err := New().Sync(c); err != nil {
+		if err := New(Options{}).Sync(c); err != nil {
 			t.Fatalf("Sync: %v", err)
 		}
 		before := getSecret(t, cl, tlsSecretName(testInstance))
@@ -591,7 +591,7 @@ func TestSyncManagedAdditionalNames(t *testing.T) {
 
 		in = newTestInstance(parameters, false)
 		c = controller.NewContext(context.Background(), cl, in, common.ProviderName)
-		if err := New().Sync(c); err != nil {
+		if err := New(Options{}).Sync(c); err != nil {
 			t.Fatalf("Sync: %v", err)
 		}
 		token := "tls-names-" + namesHash(names)
@@ -608,7 +608,7 @@ func TestSyncManagedAdditionalNames(t *testing.T) {
 
 		in.Spec.Maintenance = &corev1alpha1.MaintenanceSpec{Approved: token}
 		c = controller.NewContext(context.Background(), cl, in, common.ProviderName)
-		if err := New().Sync(c); err != nil {
+		if err := New(Options{}).Sync(c); err != nil {
 			t.Fatalf("Sync: %v", err)
 		}
 		after := getSecret(t, cl, tlsSecretName(testInstance))

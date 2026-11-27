@@ -159,6 +159,13 @@ did not set them rolls every Valkey pod once. With replicas, the operator fails 
 rolls a primary. **An instance with no replicas and no persistent storage loses its data on that
 roll**: add a replica or back the data up before upgrading.
 
+**Pod security.** The provider, the operator and the Valkey pods pass the `restricted` Pod
+Security Standard and OpenShift's default `restricted-v2` SCC. Valkey pods run as the image's
+`valkey` user (UID/GID 999, `fsGroup` 999) with seccomp `RuntimeDefault` and all capabilities
+dropped. On OpenShift, detected through the `security.openshift.io` API group, the IDs are left
+to the SCC. Earlier releases ran Valkey as root: upgrading rolls every Valkey pod once, as above,
+and the first start hands the data volume over to the valkey group.
+
 **Monitoring moved to OpenEverest monitoring destinations.** The provider no longer creates
 `PodMonitor`s or `VMPodScrape`s, and on upgrade it deletes the ones earlier releases created
 (`<instance>-metrics`, `<instance>-prometheus`, `<instance>-victoriametrics`, and the

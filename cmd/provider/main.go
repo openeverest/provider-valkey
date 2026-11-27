@@ -3,6 +3,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -24,12 +25,24 @@ func main() {
 	l := ctrl.Log.WithName("setup")
 	ctx := ctrl.SetupSignalHandler()
 
+	// reconciler.New installs the logger, so failures before it go to stderr.
 	if err := provider.SetClusterDomain(clusterDomain); err != nil {
-		l.Error(err, "invalid --cluster-domain")
+		fmt.Fprintf(os.Stderr, "invalid --cluster-domain: %v\n", err)
 		os.Exit(1)
 	}
 
-	p := provider.New()
+	cfg, err := ctrl.GetConfig()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "unable to load kubeconfig: %v\n", err)
+		os.Exit(1)
+	}
+	openShift, err := provider.DetectOpenShift(cfg)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "unable to detect the cluster platform: %v\n", err)
+		os.Exit(1)
+	}
+
+	p := provider.New(provider.Options{OpenShift: openShift})
 
 	opts := []reconciler.ReconcilerOption{
 		// Serve the health and readiness probes.
@@ -44,6 +57,7 @@ func main() {
 		l.Error(err, "unable to create reconciler")
 		os.Exit(1)
 	}
+	l.Info("detected cluster platform", "openShift", openShift)
 
 	if err := r.Start(ctx); err != nil {
 		l.Error(err, "unable to start reconciler")
